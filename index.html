@@ -19,8 +19,9 @@
       this.url = url;
       this.sy = null;
     };
-    Synth.prototype.load = function() {
-      this.sy = window.open(this.url, "sy" + id, "width=900,height=670,scrollbars=yes,resizable=yes");
+    Synth.prototype.load = function(frame) {
+      frame.location.href = this.url;
+      this.sy = frame;
     };
     Synth.prototype.noteOn = function(note, velo) {
       this.sendMessage("midi,90," + note.toString(16) + "," + velo.toString(16));
@@ -120,12 +121,12 @@
     $scope.synths.push(new Synth('Timbre.js', 'http://script-synthesizer.herokuapp.com/'));
     $scope.synths.push(new Synth('Beatonica', 'http://beatonica.com/'));
     $scope.synths.push(new Synth('Webitaur', 'http://www.angryoctopus.co.nz/synth16/'));
-    $scope.synths.push(new Synth('Pianoroll', '/pianoroll.html'));
+    //$scope.synths.push(new Synth('Pianoroll', '/pianoroll.html'));
     
     $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
     $scope.tracks = [];
     $scope.addTrack = function(synth, channel){
-      synth.load();
+      synth.load(document.iframe);
       $scope.tracks = [];//とりあえず1trackに
       $scope.tracks.push(new Track({
         name: '_',
@@ -170,6 +171,25 @@
   </div>
     
   <button ng-repeat="synth in synths" ng-click="addTrack(synth, 1)">{{synth.name}}</button>
+  
+  <hr/>
+  <div class="tracks">
+    <ul>
+      <li ng-repeat="track in tracks" class='track'>
+        <dt class="track_def">
+          <!--<label>{{$index + 1}}</label>-->
+          <span class="keyboard {{track.keyIsPressed()}}">■ </span><!--{{track.name}} : -->{{track.synth.name}}
+          <select ng-model="track.channel" ng-options="channel for channel in channels"></select>
+          <!--<select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in programs"></select>
+          <input type="checkbox" ng-model="track.rec">-->
+        </dt>
+        <dd>
+        </dd>
+      </li>
+    </ul>
+  </div>
+  
+  <iframe name="iframe" width="900px" height="600px"></iframe>
 
 </div>
 </body>
