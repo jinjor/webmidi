@@ -20,9 +20,7 @@
       this.sy = null;
     };
     Synth.prototype.load = function() {
-      if(!this.sy){
-        this.sy = window.open(this.url, "sy" + id, "width=900,height=670,scrollbars=yes,resizable=yes");
-      }
+      this.sy = window.open(this.url, "sy" + id, "width=900,height=670,scrollbars=yes,resizable=yes");
     };
     Synth.prototype.noteOn = function(note, velo) {
       this.sendMessage("midi,90," + note.toString(16) + "," + velo.toString(16));
@@ -49,7 +47,7 @@
     this.channel = arg.channel || 1;
     this.program = arg.program || 1;
     this.keyCount = 0;
-    this.rec = false;
+    this.rec = true;
   };
   Track.prototype.noteOn = function(note, velo) {
     this.putMidi(0x90, note, velo);
@@ -84,6 +82,34 @@
     $scope.connection = 'disconnected';
     $scope.echoms = '';
   
+    $scope.programs = [
+      {number:1, description:''},
+      {number:2, description:''},
+      {number:3, description:''},
+      {number:4, description:''},
+      {number:5, description:''},
+      {number:6, description:''},
+      {number:7, description:''},
+      {number:8, description:''},
+      {number:9, description:''},
+      {number:10, description:''},
+      {number:11, description:''},
+      {number:12, description:''},
+      {number:13, description:''},
+      {number:14, description:''},
+      {number:15, description:''},
+      {number:16, description:''},
+      {number:17, description:''},
+      {number:18, description:''},
+      {number:19, description:''},
+      {number:20, description:''},
+      {number:21, description:''},
+      {number:22, description:''},
+      {number:23, description:''},
+      {number:24, description:''},
+      {number:25, description:''},
+      {number:26, description:''}
+    ];
     $scope.synths = [];
     $scope.synths.push(new Synth('WebModular', 'http://www.g200kg.com/en/docs/webmodular/webmodular.html'));
     $scope.synths.push(new Synth('GMPlayer', 'http://www.g200kg.com/en/docs/gmplayer/'));
@@ -100,6 +126,7 @@
     $scope.tracks = [];
     $scope.addTrack = function(synth, channel){
       synth.load();
+      $scope.tracks = [];//とりあえず1trackに
       $scope.tracks.push(new Track({
         name: '_',
         synth: synth,
