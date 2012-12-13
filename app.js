@@ -21,22 +21,7 @@ app.get('/', function(req, res){
   var rs = fs.createReadStream('index.html');
   sys.pump(rs, res);
 });
-
 var server = http.createServer(app);
 server.listen(8080, function(){
   console.log("Express server listening on port " + 8080);
-});
-
-io.listen(server).sockets.on('connection', function (socket) {
-  console.log('connected!');
-  socket.on('midi', function(message) {
-    socket.emit('midi', message);
-    socket.broadcast.emit('midi', message);
-  });
-  socket.on('echo', function(message) {
-    socket.emit('echo', message);
-  });
-  socket.on('disconnect', function() {
-    console.log('disconnected!');
-  });
 });

@@ -10,28 +10,6 @@
   
   <link rel="stylesheet" type="text/css" href="/css/base.css"/>
   <script type="text/javascript">
-  var module = angular.module('brouserSynth', []);
-  module.factory('io', function($rootScope) {
-    return {
-      connect: function(url){
-        var socket = io.connect(url);
-        return {
-          on: function(eventName, fn) {
-            socket.on(eventName, function(data) {
-              $rootScope.$apply(function() {
-                fn(data);
-              });
-            });
-          },
-          connect: socket.connect,
-          emit: function(a,b){
-            socket.emit(a,b);
-          }
-        };
-      }
-    }
-  });
-  JazzPlugin.attachTo(module);
   
   var id = 0;
   module.factory('Synth', function($rootScope) {
@@ -42,7 +20,7 @@
     };
     Synth.prototype.load = function() {
       if(!this.sy){
-        this.sy = window.open(this.url, "sy" + id++, "width=900,height=670,scrollbars=yes,resizable=yes");
+        this.sy = window.open(this.url, "sy" + id, "width=900,height=670,scrollbars=yes,resizable=yes");
       }
     };
     Synth.prototype.noteOn = function(note, velo) {
@@ -125,36 +103,6 @@
       });
       socket.emit('echo', new Date().getMilliseconds());
     });
-    
-    $scope.programs = [
-      {number:1, description:''},
-      {number:2, description:''},
-      {number:3, description:''},
-      {number:4, description:''},
-      {number:5, description:''},
-      {number:6, description:''},
-      {number:7, description:''},
-      {number:8, description:''},
-      {number:9, description:''},
-      {number:10, description:''},
-      {number:11, description:''},
-      {number:12, description:''},
-      {number:13, description:''},
-      {number:14, description:''},
-      {number:15, description:''},
-      {number:16, description:''},
-      {number:17, description:''},
-      {number:18, description:''},
-      {number:19, description:''},
-      {number:20, description:''},
-      {number:21, description:''},
-      {number:22, description:''},
-      {number:23, description:''},
-      {number:24, description:''},
-      {number:25, description:''},
-      {number:26, description:''}
-    ];
-  
   
     $scope.synths = [];
     $scope.synths.push(new Synth('WebModular', 'http://www.g200kg.com/en/docs/webmodular/webmodular.html'));
@@ -167,70 +115,6 @@
     $scope.synths.push(new Synth('Beatonica', 'http://beatonica.com/'));
     $scope.synths.push(new Synth('Webitaur', 'http://www.angryoctopus.co.nz/synth16/'));
     $scope.synths.push(new Synth('Pianoroll', '/pianoroll.html'));
-    
-    $scope.playing = false;
-    $scope.rec = function(){
-      $scope.playing = true;
-    };
-    $scope.play = function(){
-      $scope.playing = true;
-    };
-    
-    var location = -1;
-    $scope.demo = function(){
-      location = 0;
-      $scope.playing = true;
-      var play = function(){
-        setTimeout(function(){
-          $scope.$apply(function(){
-            $.each($scope.demosong, function(i) {
-              var track = $scope.tracks[i];
-              if(track){
-                var v = this[location];
-                if(v != 0 && track.prev){
-                  track.noteOff(track.prev);
-                }
-                if(v > 0){
-                  console.log(v);
-                  track.noteOn(v, 100);
-                  track.prev = v;
-                }
-              }
-            });
-          });
-          location++;
-          if(location <= 64){
-            play();
-          }else{
-            $.each($scope.tracks, function(){
-              if(this.prev){
-                this.noteOff(this.prev);
-              }
-              this.allSoundOff();
-            });
-            
-          }
-        },1000/60*120/16);
-      }
-      play();
-    };
-    $scope.stop = function(){
-      $scope.playing = false;
-    };
-    $scope.locationSelected = function(index, note){
-      return ((location == index) && note >= 0) ? 'selected' : null;
-    }
-    
-    $scope.demosong = [
-      [-1,-1,42,-1,39,-1,42,-1,-1,-1,42,-1,39,-1,42,-1, -1,-1,42,-1,39,-1,42,-1,-1,-1,42,-1,39,-1,42,-1, -1,-1,42,-1,39,-1,42,-1,-1,-1,42,-1,39,-1,42,-1, -1,-1,42,-1,39,-1,42,-1,-1,-1,42,-1,39,-1,42,-1],
-      [36,-1,-1,-1,36,-1,-1,-1,36,-1,-1,-1,36,-1,-0,-1, 36,-1,-1,-1,36,-1,-1,-1,36,-1,-1,-1,36,-1,-1,-1, 36,-1,-1,-1,36,-1,-1,-1,36,-1,-1,-1,36,-1,-0,-1, 36,-1,-1,-1,36,-1,-1,-1,36,-1,-1,-1,36,-1,-1,-1],
-      [38,-0,-1,38,43,-0,-1,38,-1,38,-1,38,43,-0,-1,43, 36,-0,-1,36,41,-0,-1,36,-1,36,-1,36,41,33,34,35, 38,-0,-1,38,43,-0,-1,38,-1,38,-1,38,43,-0,-1,43, 36,-0,-1,36,41,-0,-1,36,-1,36,-1,36,41,33,34,35],
-      [-1,-1,64,-1,-1,64,-1,-1,-1,-1,64,-1,-1,-1,64,-1, -1,-1,62,-1,-1,62,-1,-1,-1,-1,62,-1,-1,-1,62,-1, -1,-1,64,-1,-1,64,-1,-1,-1,-1,64,-1,-1,-1,64,-1, -1,-1,62,-1,-1,62,-1,-1,-1,-1,62,-1,-1,-1,62,-1],
-      [-1,-1,59,-1,-1,59,-1,-1,-1,-1,59,-1,-1,-1,59,-1, -1,-1,57,-1,-1,57,-1,-1,-1,-1,57,-1,-1,-1,57,-1, -1,-1,59,-1,-1,59,-1,-1,-1,-1,59,-1,-1,-1,59,-1, -1,-1,57,-1,-1,57,-1,-1,-1,-1,57,-1,-1,-1,57,-1],
-      [-1,-1,53,-1,-1,53,-1,-1,-1,-1,53,-1,-1,-1,53,-1, -1,-1,51,-1,-1,51,-1,-1,-1,-1,51,-1,-1,-1,51,-1, -1,-1,53,-1,-1,53,-1,-1,-1,-1,53,-1,-1,-1,53,-1, -1,-1,51,-1,-1,51,-1,-1,-1,-1,51,-1,-1,-1,51,-1],
-      [],
-      []
-    ];
     
     $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
     $scope.tracks = [];
@@ -265,9 +149,6 @@
 <body ng-controller="KeyboardCtrl" >
   <!-- Jazz-Plugin -->
   <div>
-    {{connection}} {{echoms}}
-  </div>
-  <div>
     <object id="Jazz1" classid="CLSID:1ACE1618-1C7D-4561-AEE1-34842AA85E90" class="hidden">
       <object id="Jazz2" type="audio/x-jazz" class="hidden">
         <p style="visibility:visible;">This page requires <a href=http://jazz-soft.net>Jazz-Plugin</a> ...</p>
@@ -280,41 +161,9 @@
       </select>
     </p>
   </div>
-  <!-- -->
-    
     
   <button ng-repeat="synth in synths" ng-click="addTrack(synth, 1)">{{synth.name}}</button>
-  <!--
-  <div>
-    <button ng-click="rec()" ng-disabled="playing">●Rec</button>
-    <button ng-click="play()" ng-disabled="playing">Play</button>
-    <button ng-click="demo()" ng-disabled="playing">Demo</button>
-    <button ng-click="stop()" ng-disabled="!playing">Stop</button>
-  </div>
-  -->
-  <hr/>
-  <div class="tracks">
-    <ul>
-      <li ng-repeat="track in tracks" class='track'>
-        <dt class="track_def">
-          <label>{{$index + 1}}</label>
-          <span class="keyboard {{track.keyIsPressed()}}">■</span>{{track.name}} : {{track.synth.name}}
-          <select ng-model="track.channel" ng-options="channel for channel in channels"></select>
-          <select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in programs"></select>
-          <input type="checkbox" ng-model="track.rec">
-        </dt>
-        <dd>
-        </dd>
-      </li>
-    </ul>
-  </div>
-  <!--
-  <li ng-repeat="locations in demosong" class='demo_track'>
-    <span ng-repeat="location in locations" class='demo_location {{locationSelected($index, location)}}'>
-      {{location}}
-    </span>
-  </li>
-   -->
+
 </div>
 </body>
 </html>
