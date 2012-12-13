@@ -1,3 +1,3 @@
-Angular TODO
+WebMidiLinkSample
 ======================
-A sample application for Angular.js
+A sample application for WebMidiLink
