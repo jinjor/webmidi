@@ -3,7 +3,6 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <title>Viretual DAW</title>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
-  <script type="text/javascript" src="/socket.io/socket.io.js"></script>
   <script type="text/javascript" src="/js/angular.min.js"></script>
   <script type="text/javascript" src="/js/underscore-min.js"></script>
   <script type="text/javascript" src="/js/jazz-plugin-handler.js"></script>
@@ -12,6 +11,7 @@
   <script type="text/javascript">
   
   var module = angular.module('brouserSynth', []);
+  JazzPlugin.attachTo(module);
   var id = 0;
   module.factory('Synth', function($rootScope) {
     var Synth = function(name, url){
@@ -83,27 +83,6 @@
   function KeyboardCtrl($scope, Synth, jazz) {
     $scope.connection = 'disconnected';
     $scope.echoms = '';
-  
-    var socket = io.connect('/');
-    socket.on('connect', function() {
-      $scope.connection = 'connected';
-      console.log('connected');
-      socket.on('disconnect', function() {
-        $scope.connection = 'disconnected';
-        $scope.echoms = '';
-      });
-      socket.on('midi', function(abc){
-        var splitted = abc.split(',');
-        var a = parseInt(splitted[0]);
-        var b = parseInt(splitted[1]);
-        var c = parseInt(splitted[2]);
-        midiProcCommon(a,b,c);
-      });
-      socket.on('echo', function(message){
-        $scope.echoms = '(echo:' + (new Date().getMilliseconds() - parseInt(message)) + 'ms)';
-      });
-      socket.emit('echo', new Date().getMilliseconds());
-    });
   
     $scope.synths = [];
     $scope.synths.push(new Synth('WebModular', 'http://www.g200kg.com/en/docs/webmodular/webmodular.html'));
