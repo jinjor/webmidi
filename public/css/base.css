@@ -1,0 +1,74 @@
+li {
+  list-style-type:none;
+}
+.track{
+  border-top: solid 1px #ccccee;
+  border-right: solid 1px #bbbbe3;
+  border-bottom: solid 1px #aaaadd;
+  border-left: solid 1px #bbbbe3;
+  height:25px;
+}
+.track_def{
+  padding-left: 2px;
+  background: -moz-linear-gradient(top, #eeeeff, #ccccee);
+  background: -webkit-gradient(linear, left top, left bottom, from(#eeeeff), to(#ccccee));
+  width:450px;
+  height:100%;
+}
+
+.keyboard{
+  margin-left: 2px;
+  margin-right: 2px;
+  border:solid 1px #111111;
+  color: #113311;
+  background-color: #113311;
+}
+.keyboard.pressed{
+  color: #99ff99;
+  background-color: #99ff99;
+}
+
+
+.messages pre{
+  margin-top:0px;
+  margin-bottom:0px;
+  color:#aaaaaa;
+}
+.messages pre:first-child{
+  color:#444444;
+}
+
+.demo_track{
+  height:25px;
+}
+.demo_location{
+  border: solid 1px #ccccee;
+  font:9px;
+  display:block;
+  float:left;
+  width:20px;
+  height:20px;
+}
+.demo_location.selected{
+  background-color: #99ff99;
+}
+
+/* Jazz-Plugin*/
+.hidden {
+ visibility:hidden;
+ width:0px;
+ height:0px;
+ margin:0px;
+ padding:0px;
+ border-style:none;
+ border-width:0px;
+ max-width:0px;
+ max-height:0px;
+}
+
+#dndbox{
+  background-color: black;
+  color: white;
+  height: 100pt;
+  width: 100%;
+}

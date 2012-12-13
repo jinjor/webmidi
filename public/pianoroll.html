@@ -1,0 +1,74 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>Pianoroll</title>
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script type="text/javascript" src="/js/underscore-min.js"></script>
+    <script type="text/javascript" src="/js/enchant.min.js"></script>
+    <script>
+    var canvas;
+    $(document).ready(function(){
+      canvas = document.getElementById('pianoroll');
+      enchant();
+      var game = new Game(320, 320);
+      game.onload = function () {
+        var scene = new Scene();
+        // Node を追加する
+        // scene.addChild(sprite);
+        game.pushScene(scene);
+      };
+
+      game.start();
+    });
+    
+    var NoteElement = function(channel, note, velocity){
+      this.channel = channel;
+      this.note = note;
+      this.velocity = velocity;
+    };
+    var elements = [];
+    
+    var app = {
+      NoteOn: function(c, note, velocity){
+        var channel = c + 1;
+        elements.push(new NoteElement(channel, note, velocity));
+        $('#log').text(c + ',' + note + ',' + velocity);
+        var context = canvas.getContext('2d');
+        context.fillStyle = "rgb(255,0,0)";
+        context.fillRect(30, 30, 50, 50);
+      }
+    
+    }
+
+    if (window.addEventListener) {
+        window.addEventListener("message", webMidiLinkRecv, false);
+    }
+    function webMidiLinkRecv(event) {
+        var msg = event.data.split(",");
+        switch (msg[0]) {
+            case "midi":
+                var m = parseInt(msg[1], 16);
+                switch (m & 0xf0) {
+                    case 0x80:
+                        app.NoteOff(m & 0xf, parseInt(msg[2], 16));
+                        break;
+                    case 0x90:
+                        var velo = parseInt(msg[3], 16);
+                        if (velo > 0)
+                            app.NoteOn(m & 0xf, parseInt(msg[2], 16), velo);
+                        else
+                            app.NoteOff(m & 0xf, parseInt(msg[2], 16));
+                        break;
+                }
+                break;
+        }
+    }
+    </script>
+  </head>
+  <body>
+    <pre id="log"></pre>
+    <canvas id="pianoroll">
+      このブラウザでは閲覧できません。
+    </canvas>
+  </body>
+</html>

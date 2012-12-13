@@ -1,0 +1,21 @@
+{
+  "name": "midi-web-tool",
+  "version": "0.0.1-3",
+  "private": true,
+  "engines": {
+    "node": "0.8.x",
+    "npm": "1.1.x"
+  },
+  "dependencies": {
+    "express": "3.0.0rc4",
+    "ejs": "*",
+    "socket.io": "*",
+    "redis": "*",
+    "underscore": "*",
+    "async": "*"
+  },
+  "subdomain": "jinjor.webmidi",
+  "scripts": {
+    "start": "app.js"
+  }
+}

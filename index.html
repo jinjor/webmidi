@@ -1,0 +1,320 @@
+<html ng-app="brouserSynth">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <title>Viretual DAW</title>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+  <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+  <script type="text/javascript" src="/js/angular.min.js"></script>
+  <script type="text/javascript" src="/js/underscore-min.js"></script>
+  <script type="text/javascript" src="/js/jazz-plugin-handler.js"></script>
+  
+  <link rel="stylesheet" type="text/css" href="/css/base.css"/>
+  <script type="text/javascript">
+  var module = angular.module('brouserSynth', []);
+  module.factory('io', function($rootScope) {
+    return {
+      connect: function(url){
+        var socket = io.connect(url);
+        return {
+          on: function(eventName, fn) {
+            socket.on(eventName, function(data) {
+              $rootScope.$apply(function() {
+                fn(data);
+              });
+            });
+          },
+          connect: socket.connect,
+          emit: function(a,b){
+            socket.emit(a,b);
+          }
+        };
+      }
+    }
+  });
+  JazzPlugin.attachTo(module);
+  
+  var id = 0;
+  module.factory('Synth', function($rootScope) {
+    var Synth = function(name, url){
+      this.name = name;
+      this.url = url;
+      this.sy = null;
+    };
+    Synth.prototype.load = function() {
+      if(!this.sy){
+        this.sy = window.open(this.url, "sy" + id++, "width=900,height=670,scrollbars=yes,resizable=yes");
+      }
+    };
+    Synth.prototype.noteOn = function(note, velo) {
+      this.sendMessage("midi,90," + note.toString(16) + "," + velo.toString(16));
+    };
+    Synth.prototype.noteOff = function(note) {
+      this.sendMessage("midi,80," + note.toString(16) + ",0");
+    };
+    Synth.prototype.allSoundOff = function() {
+      this.sendMessage("midi,b0,78,0");
+    };
+    Synth.prototype.sendMidiMessage = function(m0, m1, m2) {
+      this.sendMessage('midi,' + m0.toString(16) +','+ m1.toString(16)+','+ m2.toString(16));
+    };
+    Synth.prototype.sendMessage = function(s) {
+      if(this.sy)
+          this.sy.postMessage(s, "*");
+    };
+    return Synth;
+  });
+  
+  var Track = function(arg){
+    this.name = arg.name;
+    this.synth = arg.synth;
+    this.channel = arg.channel || 1;
+    this.program = arg.program || 1;
+    this.keyCount = 0;
+    this.rec = false;
+  };
+  Track.prototype.noteOn = function(note, velo) {
+    this.putMidi(0x90, note, velo);
+  };
+  Track.prototype.noteOff = function(note) {
+    this.putMidi(0x80, note, 0);
+  };
+  Track.prototype.programChange = function(number) {
+    console.log(number);
+    this.putMidi(0xc0, number, 0);
+  };
+  Track.prototype.allSoundOff = function() {
+    this.synth.allSoundOff();
+    this.keyCount = 0;
+  };
+  Track.prototype.putMidi = function(m0, m1, m2){
+    console.log(this.name + ":" + m0 + ','+ m1 + ',' + m2);
+    if(this.rec){
+      if(m0 >> 4 == 9){
+        this.keyCount++;
+      }else if(m0 >> 4 == 8){
+        this.keyCount--;
+      }
+      this.synth.sendMidiMessage(m0 + this.channel - 1, m1, m2);//キーボードからはchannel1で来る前提
+    }
+  };
+  Track.prototype.keyIsPressed = function(){
+    return this.keyCount > 0 ? 'pressed' : '';
+  };
+  
+  function KeyboardCtrl($scope, io, Synth, jazz) {
+    $scope.connection = 'disconnected';
+    $scope.echoms = '';
+  
+    var socket = io.connect('/');
+    socket.on('connect', function() {
+      $scope.connection = 'connected';
+      console.log('connected');
+      socket.on('disconnect', function() {
+        $scope.connection = 'disconnected';
+        $scope.echoms = '';
+      });
+      socket.on('midi', function(abc){
+        var splitted = abc.split(',');
+        var a = parseInt(splitted[0]);
+        var b = parseInt(splitted[1]);
+        var c = parseInt(splitted[2]);
+        midiProcCommon(a,b,c);
+      });
+      socket.on('echo', function(message){
+        $scope.echoms = '(echo:' + (new Date().getMilliseconds() - parseInt(message)) + 'ms)';
+      });
+      socket.emit('echo', new Date().getMilliseconds());
+    });
+    
+    $scope.programs = [
+      {number:1, description:''},
+      {number:2, description:''},
+      {number:3, description:''},
+      {number:4, description:''},
+      {number:5, description:''},
+      {number:6, description:''},
+      {number:7, description:''},
+      {number:8, description:''},
+      {number:9, description:''},
+      {number:10, description:''},
+      {number:11, description:''},
+      {number:12, description:''},
+      {number:13, description:''},
+      {number:14, description:''},
+      {number:15, description:''},
+      {number:16, description:''},
+      {number:17, description:''},
+      {number:18, description:''},
+      {number:19, description:''},
+      {number:20, description:''},
+      {number:21, description:''},
+      {number:22, description:''},
+      {number:23, description:''},
+      {number:24, description:''},
+      {number:25, description:''},
+      {number:26, description:''}
+    ];
+  
+  
+    $scope.synths = [];
+    $scope.synths.push(new Synth('WebModular', 'http://www.g200kg.com/en/docs/webmodular/webmodular.html'));
+    $scope.synths.push(new Synth('GMPlayer', 'http://www.g200kg.com/en/docs/gmplayer/'));
+    $scope.synths.push(new Synth('WebBridge', 'http://www.g200kg.com/en/docs/webbridge/'));
+    $scope.synths.push(new Synth('WebBeeper', 'http://www.g200kg.com/en/docs/webbeeper/'));
+    $scope.synths.push(new Synth('WebSynth', 'http://aikelab.net/websynth/'));
+    $scope.synths.push(new Synth('BitMaker', 'http://aikelab.net/bitmaker/'));
+    $scope.synths.push(new Synth('Timbre.js', 'http://script-synthesizer.herokuapp.com/'));
+    $scope.synths.push(new Synth('Beatonica', 'http://beatonica.com/'));
+    $scope.synths.push(new Synth('Webitaur', 'http://www.angryoctopus.co.nz/synth16/'));
+    $scope.synths.push(new Synth('Pianoroll', '/pianoroll.html'));
+    
+    $scope.playing = false;
+    $scope.rec = function(){
+      $scope.playing = true;
+    };
+    $scope.play = function(){
+      $scope.playing = true;
+    };
+    
+    var location = -1;
+    $scope.demo = function(){
+      location = 0;
+      $scope.playing = true;
+      var play = function(){
+        setTimeout(function(){
+          $scope.$apply(function(){
+            $.each($scope.demosong, function(i) {
+              var track = $scope.tracks[i];
+              if(track){
+                var v = this[location];
+                if(v != 0 && track.prev){
+                  track.noteOff(track.prev);
+                }
+                if(v > 0){
+                  console.log(v);
+                  track.noteOn(v, 100);
+                  track.prev = v;
+                }
+              }
+            });
+          });
+          location++;
+          if(location <= 64){
+            play();
+          }else{
+            $.each($scope.tracks, function(){
+              if(this.prev){
+                this.noteOff(this.prev);
+              }
+              this.allSoundOff();
+            });
+            
+          }
+        },1000/60*120/16);
+      }
+      play();
+    };
+    $scope.stop = function(){
+      $scope.playing = false;
+    };
+    $scope.locationSelected = function(index, note){
+      return ((location == index) && note >= 0) ? 'selected' : null;
+    }
+    
+    $scope.demosong = [
+      [-1,-1,42,-1,39,-1,42,-1,-1,-1,42,-1,39,-1,42,-1, -1,-1,42,-1,39,-1,42,-1,-1,-1,42,-1,39,-1,42,-1, -1,-1,42,-1,39,-1,42,-1,-1,-1,42,-1,39,-1,42,-1, -1,-1,42,-1,39,-1,42,-1,-1,-1,42,-1,39,-1,42,-1],
+      [36,-1,-1,-1,36,-1,-1,-1,36,-1,-1,-1,36,-1,-0,-1, 36,-1,-1,-1,36,-1,-1,-1,36,-1,-1,-1,36,-1,-1,-1, 36,-1,-1,-1,36,-1,-1,-1,36,-1,-1,-1,36,-1,-0,-1, 36,-1,-1,-1,36,-1,-1,-1,36,-1,-1,-1,36,-1,-1,-1],
+      [38,-0,-1,38,43,-0,-1,38,-1,38,-1,38,43,-0,-1,43, 36,-0,-1,36,41,-0,-1,36,-1,36,-1,36,41,33,34,35, 38,-0,-1,38,43,-0,-1,38,-1,38,-1,38,43,-0,-1,43, 36,-0,-1,36,41,-0,-1,36,-1,36,-1,36,41,33,34,35],
+      [-1,-1,64,-1,-1,64,-1,-1,-1,-1,64,-1,-1,-1,64,-1, -1,-1,62,-1,-1,62,-1,-1,-1,-1,62,-1,-1,-1,62,-1, -1,-1,64,-1,-1,64,-1,-1,-1,-1,64,-1,-1,-1,64,-1, -1,-1,62,-1,-1,62,-1,-1,-1,-1,62,-1,-1,-1,62,-1],
+      [-1,-1,59,-1,-1,59,-1,-1,-1,-1,59,-1,-1,-1,59,-1, -1,-1,57,-1,-1,57,-1,-1,-1,-1,57,-1,-1,-1,57,-1, -1,-1,59,-1,-1,59,-1,-1,-1,-1,59,-1,-1,-1,59,-1, -1,-1,57,-1,-1,57,-1,-1,-1,-1,57,-1,-1,-1,57,-1],
+      [-1,-1,53,-1,-1,53,-1,-1,-1,-1,53,-1,-1,-1,53,-1, -1,-1,51,-1,-1,51,-1,-1,-1,-1,51,-1,-1,-1,51,-1, -1,-1,53,-1,-1,53,-1,-1,-1,-1,53,-1,-1,-1,53,-1, -1,-1,51,-1,-1,51,-1,-1,-1,-1,51,-1,-1,-1,51,-1],
+      [],
+      []
+    ];
+    
+    $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+    $scope.tracks = [];
+    $scope.addTrack = function(synth, channel){
+      synth.load();
+      $scope.tracks.push(new Track({
+        name: '_',
+        synth: synth,
+        channel: channel,
+        program: $scope.programs[0]
+      }));
+    };
+    
+    $scope.messages = [];
+    
+    var midiProcCommon = function(a,b,c){
+      $scope.messages[a] = a + ':' + b + ',' + c;
+      _($scope.tracks).each(function(track){
+        track.putMidi(a, b, c);
+      });
+    };
+    jazz.onMessage(function(t,a,b,c){
+      if(a != 248){
+        //socket.emit('midi', a + ',' + b + ',' + c);
+        midiProcCommon(a,b,c);
+      }
+    });
+  }
+  </script>
+
+</head>
+<body ng-controller="KeyboardCtrl" >
+  <!-- Jazz-Plugin -->
+  <div>
+    {{connection}} {{echoms}}
+  </div>
+  <div>
+    <object id="Jazz1" classid="CLSID:1ACE1618-1C7D-4561-AEE1-34842AA85E90" class="hidden">
+      <object id="Jazz2" type="audio/x-jazz" class="hidden">
+        <p style="visibility:visible;">This page requires <a href=http://jazz-soft.net>Jazz-Plugin</a> ...</p>
+      </object>
+    </object>
+    <p>
+      <label>MIDI Input:</label>
+      <select>
+        <option ng-repeat="midiIn in midiIns" ng-selected="currentMidiIn">{{midiIn}}</option>
+      </select>
+    </p>
+  </div>
+  <!-- -->
+    
+    
+  <button ng-repeat="synth in synths" ng-click="addTrack(synth, 1)">{{synth.name}}</button>
+  <!--
+  <div>
+    <button ng-click="rec()" ng-disabled="playing">●Rec</button>
+    <button ng-click="play()" ng-disabled="playing">Play</button>
+    <button ng-click="demo()" ng-disabled="playing">Demo</button>
+    <button ng-click="stop()" ng-disabled="!playing">Stop</button>
+  </div>
+  -->
+  <hr/>
+  <div class="tracks">
+    <ul>
+      <li ng-repeat="track in tracks" class='track'>
+        <dt class="track_def">
+          <label>{{$index + 1}}</label>
+          <span class="keyboard {{track.keyIsPressed()}}">■</span>{{track.name}} : {{track.synth.name}}
+          <select ng-model="track.channel" ng-options="channel for channel in channels"></select>
+          <select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in programs"></select>
+          <input type="checkbox" ng-model="track.rec">
+        </dt>
+        <dd>
+        </dd>
+      </li>
+    </ul>
+  </div>
+  <!--
+  <li ng-repeat="locations in demosong" class='demo_track'>
+    <span ng-repeat="location in locations" class='demo_location {{locationSelected($index, location)}}'>
+      {{location}}
+    </span>
+  </li>
+   -->
+</div>
+</body>
+</html>
