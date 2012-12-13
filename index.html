@@ -191,8 +191,8 @@
           <!--<label>{{$index + 1}}</label>-->
           <span class="keyboard {{track.keyIsPressed()}}">■</span> <!--{{track.name}} : -->{{track.synth.name}}
           <select ng-model="track.channel" ng-options="channel for channel in channels"></select>
-          <!--<select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in programs"></select>
-          <input type="checkbox" ng-model="track.rec">-->
+          <select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in programs"></select>
+          <!--<input type="checkbox" ng-model="track.rec">-->
         </dt>
         <dd>
         </dd>
