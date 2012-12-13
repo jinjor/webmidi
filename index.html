@@ -11,6 +11,7 @@
   <link rel="stylesheet" type="text/css" href="/css/base.css"/>
   <script type="text/javascript">
   
+  var module = angular.module('brouserSynth', []);
   var id = 0;
   module.factory('Synth', function($rootScope) {
     var Synth = function(name, url){
@@ -79,7 +80,7 @@
     return this.keyCount > 0 ? 'pressed' : '';
   };
   
-  function KeyboardCtrl($scope, io, Synth, jazz) {
+  function KeyboardCtrl($scope, Synth, jazz) {
     $scope.connection = 'disconnected';
     $scope.echoms = '';
   
