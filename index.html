@@ -1,11 +1,12 @@
 <html ng-app="brouserSynth">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-  <title>Viretual DAW</title>
+  <title>WebMidiLink Sample</title>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
   <script type="text/javascript" src="/js/angular.min.js"></script>
   <script type="text/javascript" src="/js/underscore-min.js"></script>
   <script type="text/javascript" src="/js/jazz-plugin-handler.js"></script>
+  <script type="text/javascript" src="/js/footerFixed.js"></script>
   
   <link rel="stylesheet" type="text/css" href="/css/base.css"/>
   <script type="text/javascript">
@@ -155,6 +156,18 @@
 
 </head>
 <body ng-controller="KeyboardCtrl" >
+  <h1>WebMidiLink Sample</h1>
+  
+  <div id="comment">
+    <p>MIDIキーボードからWebMidiLinkで音を鳴らすサンプル（つくりかけ）。<br/>MIDI接続には<a href="http://jazz-soft.net/doc/Jazz-Plugin/" target="blank">JazzPlugin</a>が必要です。<br/></p>
+    <ul>
+      <li><a href="http://www.g200kg.com/en/docs/webmidilink/" target="blank">WebMidiLinkについて</a>: シンセ作者様のリンクもこちらに<br/></li>
+      <li><a href="https://github.com/jinjor/webmidi" target="blank">GitHub</a>: このページのソースです</li>
+    </ul>
+  </div>
+  
+  <hr/>
+  
   <!-- Jazz-Plugin -->
   <div>
     <object id="Jazz1" classid="CLSID:1ACE1618-1C7D-4561-AEE1-34842AA85E90" class="hidden">
@@ -164,21 +177,19 @@
     </object>
     <p>
       <label>MIDI Input:</label>
-      <select>
-        <option ng-repeat="midiIn in midiIns" ng-selected="currentMidiIn">{{midiIn}}</option>
+      <select ng-model="currentMidiIn" ng-change="changeMidiIn(currentMidiIn)" ng-options="midiIn for midiIn in midiIns">
       </select>
     </p>
   </div>
-    
   <button ng-repeat="synth in synths" ng-click="addTrack(synth, 1)">{{synth.name}}</button>
   
-  <hr/>
+  
   <div class="tracks">
     <ul>
       <li ng-repeat="track in tracks" class='track'>
         <dt class="track_def">
           <!--<label>{{$index + 1}}</label>-->
-          <span class="keyboard {{track.keyIsPressed()}}">■ </span><!--{{track.name}} : -->{{track.synth.name}}
+          <span class="keyboard {{track.keyIsPressed()}}">■</span> <!--{{track.name}} : -->{{track.synth.name}}
           <select ng-model="track.channel" ng-options="channel for channel in channels"></select>
           <!--<select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in programs"></select>
           <input type="checkbox" ng-model="track.rec">-->
@@ -189,7 +200,17 @@
     </ul>
   </div>
   
-  <iframe name="iframe" width="900px" height="600px"></iframe>
+  <iframe id="wml_flame" name="iframe" width="900px" height="400px" src="iframe.html"></iframe>
+
+  <div>
+<a href="https://twitter.com/share" class="twitter-share-button" data-url="http://jinjor.webmidi.jit.su/" data-via="jinjor" data-lang="ja">ツイート</a>
+<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+</div>
+<footer id="footer">
+  <hr/>
+
+  Copyright (C) 2012 Yosuke Torii All Rights Reserved.
+</footer>
 
 </div>
 </body>
