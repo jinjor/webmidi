@@ -49,13 +49,14 @@
     this.channel = arg.channel || 1;
     this.program = arg.program || 1;
     this.keyCount = 0;
-    this.rec = true;
+    this.selected = true;
     this.messages = [
-      {time: 1000, message: [0x90, 60, 127]},
-      {time: 2000, message: [0x80, 60, 0]},
-      {time: 3000, message: [0x90, 62, 127]},
-      {time: 4000, message: [0x80, 62, 0]}
+      {time: 1000 * 60 * 10, message: [0x80, 62, 0]}
     ];
+  };
+  Track.prototype.rec = function(time, m0, m1, m2) {
+    console.log(time);
+    this.messages.push({time: time, message: [m0, m1, m2]})
   };
   Track.prototype.noteOn = function(note, velo) {
     this.putMidi(0x90, note, velo);
@@ -73,7 +74,7 @@
   };
   Track.prototype.putMidi = function(m0, m1, m2){
     console.log(this.name + ":" + m0 + ','+ m1 + ',' + m2);
-    if(this.rec){
+    if(this.selected){
       if(m0 >> 4 == 9){
         this.keyCount++;
       }else if(m0 >> 4 == 8){
@@ -99,16 +100,36 @@
       this.tracks = tracks;
       this.playing = false;
     };
-    Sequencer.prototype.play = function(){
+    Sequencer.prototype.send = function(t, m0, m1, m2){
+      var that = this;
+      _(this.tracks).each(function(track){
+        if(that.playing == 'recoding'){
+          track.rec(that.location, m0, m1, m2);
+        }
+        track.putMidi(m0, m1, m2);
+      });
+    };
+    Sequencer.prototype.rec = function(){
+      this.play('recoding');
+    };
+    Sequencer.prototype.stopPlaying = function(){
+      var that = this;
+      _(this.tracks).each(function(track){
+        track.allSoundOff();
+      });
+    };
+    Sequencer.prototype.play = function(optMode){
       if(this.tracks.length <= 0){
         return;
       }
       var track = this.tracks[0];
       var messages = track.messages;//TODO
-      this.playing = true;
+      
+      this.playing = optMode || 'playing';
       messages.sort(function(a, b){
-        a.time - b.time;
+        return a.time - b.time;
       });
+      console.log(messages);
       var index = 0;
       var current;
       start = (new Date()).getTime();
@@ -117,10 +138,10 @@
         that.location = (new Date()).getTime() - start;
         current = (index < messages.length) ? messages[index] : null;
         if(!that.playing){
-          console.log("break");
-          //break
+          that.stopPlaying();//念のため
         }else if(!current){
           that.stop();
+          $scope.$apply();
         }else if(current.time < that.location){
           track.putMidi(current.message[0], current.message[1], current.message[2]);
           index++;
@@ -134,9 +155,9 @@
     Sequencer.prototype.stop = function(){
       console.log("stop");
       this.location = 0;
-      this.playing = false;
+      this.playing = null;
+      this.stopPlaying();
     };
-    
   
     $scope.programs = [
       {number:1, description:''},
@@ -195,7 +216,7 @@
     $scope.sequencer = new Sequencer($scope.tracks);
     $scope.playing = false;
     $scope.rec = function(){
-      $scope.sequencer.playing = true;
+      $scope.sequencer.rec();
     };
     $scope.play = function(){
       $scope.sequencer.play();
@@ -204,16 +225,9 @@
       $scope.sequencer.stop();
     }
     
-    var midiProcCommon = function(a,b,c){
-      $scope.messages[a] = a + ':' + b + ',' + c;
-      _($scope.tracks).each(function(track){
-        track.putMidi(a, b, c);
-      });
-    };
-    jazz.onMessage(function(t,a,b,c){
-      if(a != 248){
-        //socket.emit('midi', a + ',' + b + ',' + c);
-        midiProcCommon(a,b,c);
+    jazz.onMessage(function(t, m0, m1, m2){
+      if(m0 != 248){
+        $scope.sequencer.send(t, m0, m1, m2);
       }
     });
   }
