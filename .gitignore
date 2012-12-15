@@ -1,6 +1,6 @@
 /data
 /node_modules
-conf.js
+secret.js
 
 #################
 ## Eclipse

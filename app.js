@@ -4,7 +4,8 @@ var http    = require('http')
     ,path    = require('path')
     ,io	     = require('socket.io')
     ,express = require('express')
-    ,conf    = require('./conf.js').conf;
+    ,conf    = require('./conf.js')
+    ,secret  = require('./secret.js');
 
 var app = express();
 app.configure(function(){
@@ -23,8 +24,8 @@ app.configure(function(){
 var oauth = new (require('oauth').OAuth)(
     'https://api.twitter.com/oauth/request_token',
     'https://api.twitter.com/oauth/access_token',
-    conf.twitter.consumerKey, // consumer key
-    conf.twitter.consumerSecret, // consumer secret
+    secret.twitter.consumerKey, // consumer key
+    secret.twitter.consumerSecret, // consumer secret
     '1.0',
     'http://' + conf.host + ':' + conf.port + '/signin/twitter', // callback URL
     'HMAC-SHA1'
