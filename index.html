@@ -116,21 +116,23 @@
       var tick = function(){
         that.location = (new Date()).getTime() - start;
         current = (index < messages.length) ? messages[index] : null;
-        if(current && current.time < that.location){
+        if(!that.playing){
+          console.log("break");
+          //break
+        }else if(!current){
+          that.stop();
+        }else if(current.time < that.location){
           track.putMidi(current.message[0], current.message[1], current.message[2]);
           index++;
           tick();
-        }else if(current){
-          setTimeout(tick, 1)
         }else{
-          console.log("stop");
-          that.stop();
-          $scope.$apply();
+          setTimeout(tick, 1)
         }
       };
       tick();
     };
     Sequencer.prototype.stop = function(){
+      console.log("stop");
       this.location = 0;
       this.playing = false;
     };
@@ -198,7 +200,9 @@
     $scope.play = function(){
       $scope.sequencer.play();
     };
-    $scope.stop = $scope.sequencer.stop;
+    $scope.stop = function(){
+      $scope.sequencer.stop();
+    }
     
     var midiProcCommon = function(a,b,c){
       $scope.messages[a] = a + ':' + b + ',' + c;
