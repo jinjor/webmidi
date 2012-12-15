@@ -50,6 +50,12 @@
     this.program = arg.program || 1;
     this.keyCount = 0;
     this.rec = true;
+    this.messages = [
+      {time: 1000, message: [0x90, 60, 127]},
+      {time: 2000, message: [0x80, 60, 0]},
+      {time: 3000, message: [0x90, 62, 127]},
+      {time: 4000, message: [0x80, 62, 0]}
+    ];
   };
   Track.prototype.noteOn = function(note, velo) {
     this.putMidi(0x90, note, velo);
@@ -87,6 +93,48 @@
     $http({method: 'GET', url: '/session'}).success(function(user) {
       $scope.user = user;
     });
+    
+    var Sequencer = function(tracks){
+      this.location = 0;
+      this.tracks = tracks;
+      this.playing = false;
+    };
+    Sequencer.prototype.play = function(){
+      if(this.tracks.length <= 0){
+        return;
+      }
+      var track = this.tracks[0];
+      var messages = track.messages;//TODO
+      this.playing = true;
+      messages.sort(function(a, b){
+        a.time - b.time;
+      });
+      var index = 0;
+      var current;
+      start = (new Date()).getTime();
+      var that = this;
+      var tick = function(){
+        that.location = (new Date()).getTime() - start;
+        current = (index < messages.length) ? messages[index] : null;
+        if(current && current.time < that.location){
+          track.putMidi(current.message[0], current.message[1], current.message[2]);
+          index++;
+          tick();
+        }else if(current){
+          setTimeout(tick, 1)
+        }else{
+          console.log("stop");
+          that.stop();
+          $scope.$apply();
+        }
+      };
+      tick();
+    };
+    Sequencer.prototype.stop = function(){
+      this.location = 0;
+      this.playing = false;
+    };
+    
   
     $scope.programs = [
       {number:1, description:''},
@@ -132,16 +180,25 @@
     $scope.tracks = [];
     $scope.addTrack = function(synth, channel){
       synth.load(document.iframe);
-      $scope.tracks = [];//とりあえず1trackに
-      $scope.tracks.push(new Track({
+      $scope.tracks[0] = new Track({//とりあえず1trackに
         name: '_',
         synth: synth,
         channel: channel,
         program: $scope.programs[0]
-      }));
+      });
     };
     
     $scope.messages = [];
+    
+    $scope.sequencer = new Sequencer($scope.tracks);
+    $scope.playing = false;
+    $scope.rec = function(){
+      $scope.sequencer.playing = true;
+    };
+    $scope.play = function(){
+      $scope.sequencer.play();
+    };
+    $scope.stop = $scope.sequencer.stop;
     
     var midiProcCommon = function(a,b,c){
       $scope.messages[a] = a + ':' + b + ',' + c;
@@ -190,10 +247,9 @@
   <button ng-repeat="synth in synths" ng-click="addTrack(synth, 1)">{{synth.name}}</button>
   
   <div>
-    <button ng-click="rec()" ng-disabled="playing">●Rec</button>
-    <button ng-click="play()" ng-disabled="playing">Play</button>
-    <button ng-click="demo()" ng-disabled="playing">Demo</button>
-    <button ng-click="stop()" ng-disabled="!playing">Stop</button>
+    <button ng-click="rec()" ng-disabled="sequencer.playing">●Rec</button>
+    <button ng-click="play()" ng-disabled="sequencer.playing">Play</button>
+    <button ng-click="stop()" ng-disabled="!sequencer.playing">Stop</button>
   </div>
   <div class="tracks">
     <ul>
