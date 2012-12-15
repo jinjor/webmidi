@@ -12,7 +12,8 @@
     "socket.io": "*",
     "redis": "*",
     "underscore": "*",
-    "async": "*"
+    "async": "*",
+    "oauth": "*"
   },
   "subdomain": "jinjor.webmidi",
   "scripts": {

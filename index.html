@@ -80,9 +80,13 @@
     return this.keyCount > 0 ? 'pressed' : '';
   };
   
-  function KeyboardCtrl($scope, Synth, jazz) {
+  function KeyboardCtrl($scope, $http, Synth, jazz) {
     $scope.connection = 'disconnected';
     $scope.echoms = '';
+    $scope.user = null;
+    $http({method: 'GET', url: '/session'}).success(function(user) {
+      $scope.user = user;
+    });
   
     $scope.programs = [
       {number:1, description:''},
@@ -158,6 +162,8 @@
 <body ng-controller="KeyboardCtrl" >
   <h1>WebMidiLink Sample</h1>
   
+  <div ng-show="user">ようこそ {{user}}<a href="/signout">ログアウト</a></div>
+  <div ng-show="!user"><a href="/signin/twitter">Twitter認証でログイン</a></div>
   <div id="comment">
     <p>MIDIキーボードからWebMidiLinkで音を鳴らすサンプル（つくりかけ）。<br/>MIDI接続には<a href="http://jazz-soft.net/doc/Jazz-Plugin/" target="blank">JazzPlugin</a>が必要です。<br/></p>
     <ul>
