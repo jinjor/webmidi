@@ -6,6 +6,9 @@ var http    = require('http')
     ,express = require('express')
     ,conf    = require('./conf.js')
     ,secret  = require('./secret.js');
+    
+var host = (process.env.APP_MODE === 'debug') ? 'localhost' : conf.host;
+console.log('host: ' + host);
 
 var app = express();
 app.configure(function(){
@@ -27,12 +30,12 @@ var oauth = new (require('oauth').OAuth)(
     secret.twitter.consumerKey, // consumer key
     secret.twitter.consumerSecret, // consumer secret
     '1.0',
-    'http://' + conf.host + ':' + conf.port + '/signin/twitter', // callback URL
+    'http://' + host + ':' + conf.port + '/signin/twitter', // callback URL
     'HMAC-SHA1'
 );
 
 app.get('/', function(req, res){
-  console.log(req.session.user);
+  console.log('user:' + req.session.user);
   res.writeHead(200, {'Content-Type': 'text/html'});
   var rs = fs.createReadStream('index.html');
   sys.pump(rs, res);
