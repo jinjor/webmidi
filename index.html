@@ -189,7 +189,12 @@
   </div>
   <button ng-repeat="synth in synths" ng-click="addTrack(synth, 1)">{{synth.name}}</button>
   
-  
+  <div>
+    <button ng-click="rec()" ng-disabled="playing">●Rec</button>
+    <button ng-click="play()" ng-disabled="playing">Play</button>
+    <button ng-click="demo()" ng-disabled="playing">Demo</button>
+    <button ng-click="stop()" ng-disabled="!playing">Stop</button>
+  </div>
   <div class="tracks">
     <ul>
       <li ng-repeat="track in tracks" class='track'>
