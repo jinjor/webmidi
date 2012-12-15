@@ -1,4 +1,2 @@
-exports = {
-    host: 'jinjor.webmidi.jit.su',
-    port: 8080
-};
+exports.host = 'jinjor.webmidi.jit.su';
+exports.port = 8080;
