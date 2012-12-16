@@ -226,8 +226,12 @@
     }
     
     jazz.onMessage(function(t, m0, m1, m2){
-      if(m0 != 248){
-        $scope.sequencer.send(t, m0, m1, m2);
+      if(m0 == 248){
+        //$scope.sequencer.send(t, m0, m1, m2);
+      }else{
+        $scope.$apply(function() {
+          $scope.sequencer.send(t, m0, m1, m2);
+        });
       }
     });
   }

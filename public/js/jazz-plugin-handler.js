@@ -60,11 +60,7 @@ var JazzPlugin = {
       
       return {
         onMessage: function(f){
-          midiProc = function(t, a, b, c){
-            $rootScope.$apply(function() {
-              f(t, a, b, c);
-            });
-          };
+          midiProc = f;
         }
       };
     });
