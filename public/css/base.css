@@ -37,8 +37,9 @@ li {
   border-bottom: solid 1px #aaaadd;
   border-left: solid 1px #bbbbe3;
   height:25px;
-  width: 550px;
+  padding-right: 50px;
 }
+
 .track_def{
   padding-left: 2px;
   background: -moz-linear-gradient(top, #eeeeff, #ccccee);

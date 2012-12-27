@@ -43,20 +43,58 @@
     return Synth;
   });
   
+  var RecState = function() {
+    this.keyCount = 0;
+    this.noteOns = [];
+    this.running = false;
+    this.startTime = (new Date()).getTime();
+  };
+  RecState.prototype.onNoteFinished = function(startTime, endTime, velocity){};
+  RecState.prototype.onElse = function(time, m0, m1, m2){};
+  RecState.prototype.send = function(m0, m1, m2){
+    var time = this.getLocation();
+    if(m0 >> 4 == 9){
+      this.noteOns[m1] = [time, m2];
+      this.keyCount++;
+    }else if(m0 >> 4 == 8){
+      var startTime_velocity = this.noteOns[m1];
+      startTime_velocity && this.onNoteFinished(m1, startTime_velocity[1], startTime_velocity[0], time);
+      this.noteOns[m1] = false;
+      this.keyCount--;
+    }else{
+      this.onElse(time, m0, m1, m2);
+    }
+  };
+  RecState.prototype.reset = function(){
+    this.keyCount = 0;
+    this.noteOns = [];
+  };
+  RecState.prototype.keyIsPressed = function(){
+    return this.keyCount > 0;
+  };
+  RecState.prototype.getLocation = function(){
+    return (new Date()).getTime() - this.startTime;
+  };
+  
+  
   var Track = function(arg){
+    this.id = 'hoge';
     this.name = arg.name;
     this.synth = arg.synth;
     this.channel = arg.channel || 1;
     this.program = arg.program || 1;
-    this.keyCount = 0;
     this.selected = true;
     this.messages = [
       {time: 1000 * 60 * 10, message: [0x80, 62, 0]}
     ];
+    this.notes = [];
   };
-  Track.prototype.rec = function(time, m0, m1, m2) {
-    console.log(time);
-    this.messages.push({time: time, message: [m0, m1, m2]})
+  Track.prototype.recNote = function(note, velocity, startTime, endTime){
+    this.messages.push({time: startTime, message: [0x90, note, velocity]});
+    this.messages.push({time: endTime, message: [0x80, note, 0]});
+  };
+  Track.prototype.recElse = function(time, m0, m1, m2){
+    this.messages.push({time: time, message: [m0, m1, m2]});
   };
   Track.prototype.noteOn = function(note, velo) {
     this.putMidi(0x90, note, velo);
@@ -70,42 +108,46 @@
   };
   Track.prototype.allSoundOff = function() {
     this.synth.allSoundOff();
-    this.keyCount = 0;
   };
   Track.prototype.putMidi = function(m0, m1, m2){
     console.log(this.name + ":" + m0 + ','+ m1 + ',' + m2);
     if(this.selected){
-      if(m0 >> 4 == 9){
-        this.keyCount++;
-      }else if(m0 >> 4 == 8){
-        this.keyCount--;
-      }
       this.synth.sendMidiMessage(m0 + this.channel - 1, m1, m2);//キーボードからはchannel1で来る前提
     }
   };
-  Track.prototype.keyIsPressed = function(){
-    return this.keyCount > 0 ? 'pressed' : '';
-  };
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
+    $scope.showFrame = false;
     $scope.connection = 'disconnected';
     $scope.echoms = '';
     $scope.user = null;
     $http({method: 'GET', url: '/session'}).success(function(user) {
       $scope.user = user;
     });
-    
     var Sequencer = function(tracks){
       this.location = 0;
       this.tracks = tracks;
       this.playing = false;
+      this.recState = new RecState();
+    };
+    Sequencer.prototype.foreachTrack = function(f){
+      _(this.tracks).each(function(track){
+        f(track);
+      });
     };
     Sequencer.prototype.send = function(t, m0, m1, m2){
-      var that = this;
-      _(this.tracks).each(function(track){
-        if(that.playing == 'recoding'){
-          track.rec(that.location, m0, m1, m2);
-        }
+      this.recState.send(m0, m1, m2);
+      if(this.playing == 'recoding'){
+        
+        var canvas = document.getElementById('hoge');
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = "#ff4444";
+        ctx.beginPath();
+        var x = this.recState.getLocation() * 0.01;
+        var y = (127 - m1);
+        ctx.fillRect(x, y, 2, 2);
+      }
+      this.foreachTrack(function(track){
         track.putMidi(m0, m1, m2);
       });
     };
@@ -113,8 +155,7 @@
       this.play('recoding');
     };
     Sequencer.prototype.stopPlaying = function(){
-      var that = this;
-      _(this.tracks).each(function(track){
+      this.foreachTrack(function(track){
         track.allSoundOff();
       });
     };
@@ -122,8 +163,23 @@
       if(this.tracks.length <= 0){
         return;
       }
-      var track = this.tracks[0];
-      var messages = track.messages;//TODO
+      var that = this;
+      this.recState = new RecState();
+      if(optMode == 'recoding'){
+        this.recState.onNoteFinished = function(note, velocity, startTime, endTime){
+          that.foreachTrack(function(track){
+            track.recNote(note, velocity, startTime, endTime);
+          });
+        };
+        this.recState.onElse = function(m0, m1, m2){
+          that.foreachTrack(function(track){
+            track.onElse(m0, m1, m2);
+          });
+        };
+      }
+      
+      var messages = this.tracks[0].messages;//TODO
+      console.log(messages);
       
       this.playing = optMode || 'playing';
       messages.sort(function(a, b){
@@ -132,18 +188,19 @@
       console.log(messages);
       var index = 0;
       var current;
-      start = (new Date()).getTime();
       var that = this;
       var tick = function(){
-        that.location = (new Date()).getTime() - start;
+        var location = that.recState.getLocation();
         current = (index < messages.length) ? messages[index] : null;
         if(!that.playing){
           that.stopPlaying();//念のため
         }else if(!current){
           that.stop();
           $scope.$apply();
-        }else if(current.time < that.location){
-          track.putMidi(current.message[0], current.message[1], current.message[2]);
+        }else if(current.time < location){
+          that.foreachTrack(function(track){
+            track.putMidi(current.message[0], current.message[1], current.message[2]);
+          });
           index++;
           tick();
         }else{
@@ -154,11 +211,12 @@
     };
     Sequencer.prototype.stop = function(){
       console.log("stop");
+      $scope.recState = null;
       this.location = 0;
       this.playing = null;
       this.stopPlaying();
     };
-  
+    
     $scope.programs = [
       {number:1, description:''},
       {number:2, description:''},
@@ -188,15 +246,15 @@
       {number:26, description:''}
     ];
     $scope.synths = [];
-    $scope.synths.push(new Synth('WebModular', 'http://www.g200kg.com/en/docs/webmodular/webmodular.html'));
+    //$scope.synths.push(new Synth('WebModular', 'http://www.g200kg.com/en/docs/webmodular/webmodular.html'));
     $scope.synths.push(new Synth('GMPlayer', 'http://www.g200kg.com/en/docs/gmplayer/'));
-    $scope.synths.push(new Synth('WebBridge', 'http://www.g200kg.com/en/docs/webbridge/'));
+    //$scope.synths.push(new Synth('WebBridge', 'http://www.g200kg.com/en/docs/webbridge/'));
     $scope.synths.push(new Synth('WebBeeper', 'http://www.g200kg.com/en/docs/webbeeper/'));
-    $scope.synths.push(new Synth('WebSynth', 'http://aikelab.net/websynth/'));
-    $scope.synths.push(new Synth('BitMaker', 'http://aikelab.net/bitmaker/'));
-    $scope.synths.push(new Synth('Timbre.js', 'http://script-synthesizer.herokuapp.com/'));
-    $scope.synths.push(new Synth('Beatonica', 'http://beatonica.com/'));
-    $scope.synths.push(new Synth('Webitaur', 'http://www.angryoctopus.co.nz/synth16/'));
+    //$scope.synths.push(new Synth('WebSynth', 'http://aikelab.net/websynth/'));
+    //$scope.synths.push(new Synth('BitMaker', 'http://aikelab.net/bitmaker/'));
+    //$scope.synths.push(new Synth('Timbre.js', 'http://script-synthesizer.herokuapp.com/'));
+    //$scope.synths.push(new Synth('Beatonica', 'http://beatonica.com/'));
+    //$scope.synths.push(new Synth('Webitaur', 'http://www.angryoctopus.co.nz/synth16/'));
     //$scope.synths.push(new Synth('Pianoroll', '/pianoroll.html'));
     
     $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
@@ -210,10 +268,11 @@
         program: $scope.programs[0]
       });
     };
-    
     $scope.messages = [];
-    
     $scope.sequencer = new Sequencer($scope.tracks);
+    $scope.keyIsPressed = function(track){
+      return (track.selected && $scope.sequencer.recState && $scope.sequencer.recState.keyIsPressed()) ? 'pressed' : '';
+    };
     $scope.playing = false;
     $scope.rec = function(){
       $scope.sequencer.rec();
@@ -278,19 +337,18 @@
       <li ng-repeat="track in tracks" class='track'>
         <dt class="track_def">
           <!--<label>{{$index + 1}}</label>-->
-          <span class="keyboard {{track.keyIsPressed()}}">■</span> <!--{{track.name}} : -->{{track.synth.name}}
+          <span class="keyboard {{keyIsPressed(track)}}">■</span> <!--{{track.name}} : -->{{track.synth.name}}
           <select ng-model="track.channel" ng-options="channel for channel in channels"></select>
           <select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in programs"></select>
           <!--<input type="checkbox" ng-model="track.rec">-->
         </dt>
         <dd>
+          <canvas class="pianoroll_summary" id="{{track.id}}" width="800px" height="128px"></canvas>
         </dd>
       </li>
     </ul>
   </div>
-  
-  <iframe id="wml_flame" name="iframe" width="900px" height="400px" src="iframe.html"></iframe>
-
+  <iframe ng-show="showFrame" id="wml_flame" name="iframe" width="900px" height="400px" src="iframe.html"></iframe>
   <div>
 <a href="https://twitter.com/share" class="twitter-share-button" data-url="http://jinjor.webmidi.jit.su/" data-via="jinjor" data-lang="ja">ツイート</a>
 <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
