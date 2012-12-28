@@ -130,7 +130,6 @@
       $scope.user = user;
     });
     
-    
     var Sequencer = function(tracks){
       this.location = 0;
       this.tracks = tracks;
@@ -232,7 +231,6 @@
     };
     
     $scope.synths = [];
-    //$scope.synths.push(new Synth('WebModular', 'http://www.g200kg.com/en/docs/webmodular/webmodular.html'));
     $scope.synths.push(new Synth('GMPlayer', 'http://www.g200kg.com/en/docs/gmplayer/','g200kg', [
       {number:1, description:''},
       {number:2, description:''},
@@ -261,7 +259,6 @@
       {number:25, description:''},
       {number:26, description:''}
     ]));
-    //$scope.synths.push(new Synth('WebBridge', 'http://www.g200kg.com/en/docs/webbridge/'));
     $scope.synths.push(new Synth('WebBeeper', 'http://www.g200kg.com/en/docs/webbeeper/','g200kg', [
       {number:1, description:''},
       {number:2, description:''},
@@ -290,6 +287,8 @@
       {number:25, description:''},
       {number:26, description:''}
     ]));
+    //$scope.synths.push(new Synth('WebModular', 'http://www.g200kg.com/en/docs/webmodular/webmodular.html'));
+    //$scope.synths.push(new Synth('WebBridge', 'http://www.g200kg.com/en/docs/webbridge/'));
     //$scope.synths.push(new Synth('WebSynth', 'http://aikelab.net/websynth/'));
     //$scope.synths.push(new Synth('BitMaker', 'http://aikelab.net/bitmaker/'));
     //$scope.synths.push(new Synth('Timbre.js', 'http://script-synthesizer.herokuapp.com/'));
@@ -398,7 +397,7 @@
           <!--<label>{{$index + 1}}</label>-->
           <span class="keyboard {{keyIsPressed(track)}}">■</span> <!--{{track.name}} : {{track.synth.name}}-->
           <select ng-model="track.synth" ng-options="synth.name for synth in synths"></select>
-          <label>Ch:</label><select ng-model="track.channel" ng-disabled="true" ng-options="channel for channel in channels"></select>
+          <label>Ch:</label><select ng-model="track.channel" ng-disabled="false" ng-options="channel for channel in channels"></select>
           <select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in track.synth.programs"></select>
           <!--<input type="checkbox" ng-model="track.rec">-->
         </div>
@@ -410,11 +409,9 @@
   </div>
   <iframe ng-repeat="synth in synths" ng-show="showFrame" name="{{synth.id}}" width="600px" height="400px" src="iframe.html"></iframe>
   <div>
-    <!--
   <form>
     <input id="" type="submit" value="Save" ng-disabled="!user"></input>
   </form>
-    -->
 <a href="https://twitter.com/share" class="twitter-share-button" data-url="http://jinjor.webmidi.jit.su/" data-via="jinjor" data-lang="ja">ツイート</a>
 <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
 </div>
