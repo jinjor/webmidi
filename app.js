@@ -30,7 +30,7 @@ var oauth = new (require('oauth').OAuth)(
     secret.twitter.consumerKey, // consumer key
     secret.twitter.consumerSecret, // consumer secret
     '1.0',
-    'http://' + host + ':' + conf.port + '/signin/twitter', // callback URL
+    'http://' + host + ':' + 80 + '/signin/twitter', // callback URL
     'HMAC-SHA1'
 );
 
