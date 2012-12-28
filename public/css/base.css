@@ -32,20 +32,39 @@ li {
 
 
 .track{
-  border-top: solid 1px #ccccee;
-  border-right: solid 1px #bbbbe3;
-  border-bottom: solid 1px #aaaadd;
-  border-left: solid 1px #bbbbe3;
-  height:25px;
-  padding-right: 50px;
+  border-top: solid 1px #666699;
+  border-right: solid 1px #666699;
+  border-bottom: solid 1px #666699;
+  border-left: solid 1px #666699;
+  width:900px;
+  height:140px;
+  padding-right: 0px;
 }
 
 .track_def{
-  padding-left: 2px;
+  padding: 2px 2px 2px 2px;
+  background: -moz-linear-gradient(top, #cccccc, #888888);
+  background: -webkit-gradient(linear, left top, left bottom, from(#cccccc), to(#888888));
+  width:300px;
+  height:136px;
+  float: left;
+  border-right: solid 1px #666699;
+}
+.track.selected .track_def{
+  background: -moz-linear-gradient(top, #ccccee, #8888cc);
+  background: -webkit-gradient(linear, left top, left bottom, from(#ccccee), to(#8888cc));
+}
+.pianoroll_summary{
+  padding: 2px 2px 2px 2px;
+  background: -moz-linear-gradient(top, #eeeeee, #cccccc);
+  background: -webkit-gradient(linear, left top, left bottom, from(#eeeeee), to(#cccccc));
+  float: left;
+  width:591px;
+  height:136px;
+}
+.track.selected .pianoroll_summary{
   background: -moz-linear-gradient(top, #eeeeff, #ccccee);
   background: -webkit-gradient(linear, left top, left bottom, from(#eeeeff), to(#ccccee));
-  width:450px;
-  height:100%;
 }
 
 .keyboard{

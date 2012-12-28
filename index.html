@@ -15,9 +15,12 @@
   JazzPlugin.attachTo(module);
   var id = 0;
   module.factory('Synth', function($rootScope) {
-    var Synth = function(name, url){
+    var Synth = function(name, url, author, programs){
+      this.id = name;
       this.name = name;
       this.url = url;
+      this.author = author;
+      this.programs = programs;
       this.sy = null;
     };
     Synth.prototype.load = function(frame) {
@@ -76,9 +79,12 @@
     return (new Date()).getTime() - this.startTime;
   };
   
-  
+  var trackId = 0;
+  function createTrackId(){
+    return ++trackId;
+  };
   var Track = function(arg){
-    this.id = 'hoge';
+    this.id = createTrackId();
     this.name = arg.name;
     this.synth = arg.synth;
     this.channel = arg.channel || 1;
@@ -110,10 +116,9 @@
     this.synth.allSoundOff();
   };
   Track.prototype.putMidi = function(m0, m1, m2){
-    console.log(this.name + ":" + m0 + ','+ m1 + ',' + m2);
-    if(this.selected){
-      this.synth.sendMidiMessage(m0 + this.channel - 1, m1, m2);//キーボードからはchannel1で来る前提
-    }
+    console.log(this.id);
+    console.log(this.program);
+    this.synth.sendMidiMessage(m0 + this.channel - 1, m1, m2);//キーボードからはchannel1で来る前提
   };
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
@@ -124,6 +129,8 @@
     $http({method: 'GET', url: '/session'}).success(function(user) {
       $scope.user = user;
     });
+    
+    
     var Sequencer = function(tracks){
       this.location = 0;
       this.tracks = tracks;
@@ -138,17 +145,21 @@
     Sequencer.prototype.send = function(t, m0, m1, m2){
       this.recState.send(m0, m1, m2);
       if(this.playing == 'recoding'){
-        
-        var canvas = document.getElementById('hoge');
-        var ctx = canvas.getContext('2d');
-        ctx.fillStyle = "#ff4444";
-        ctx.beginPath();
-        var x = this.recState.getLocation() * 0.01;
-        var y = (127 - m1);
-        ctx.fillRect(x, y, 2, 2);
+        var that = this;
+        this.foreachTrack(function(track){
+          if($scope.trackIsSelected(track)){
+            var canvas = document.getElementById('' + track.id);
+            var ctx = canvas.getContext('2d');
+            ctx.fillStyle = "#ff4444";
+            ctx.beginPath();
+            var x = that.recState.getLocation() * 0.01;
+            var y = (127 - m1);
+            ctx.fillRect(x, y, 2, 2);
+          }
+        });
       }
       this.foreachTrack(function(track){
-        track.putMidi(m0, m1, m2);
+        $scope.trackIsSelected(track) && track.putMidi(m0, m1, m2);
       });
     };
     Sequencer.prototype.rec = function(){
@@ -168,39 +179,42 @@
       if(optMode == 'recoding'){
         this.recState.onNoteFinished = function(note, velocity, startTime, endTime){
           that.foreachTrack(function(track){
-            track.recNote(note, velocity, startTime, endTime);
+            $scope.trackIsSelected(track) && track.recNote(note, velocity, startTime, endTime);
           });
         };
         this.recState.onElse = function(m0, m1, m2){
           that.foreachTrack(function(track){
-            track.onElse(m0, m1, m2);
+            $scope.trackIsSelected(track) && track.onElse(m0, m1, m2);
           });
         };
       }
-      
-      var messages = this.tracks[0].messages;//TODO
-      console.log(messages);
+      var messageTrackPairs = _(this.tracks).reduce(function(memo, track){
+        var pairs = _(track.messages).map(function(mes){ return [mes, track] });
+        return memo.concat(pairs);
+      }, []);
       
       this.playing = optMode || 'playing';
-      messages.sort(function(a, b){
-        return a.time - b.time;
+      messageTrackPairs.sort(function(a, b){
+        return a[0].time - b[0].time;
       });
-      console.log(messages);
+      console.log(messageTrackPairs);
       var index = 0;
       var current;
+      var currentTrack;
+      var currentMessage;
       var that = this;
       var tick = function(){
         var location = that.recState.getLocation();
-        current = (index < messages.length) ? messages[index] : null;
+        current = (index < messageTrackPairs.length) ? messageTrackPairs[index] : null;
+        currentTrack = current[1];
+        currentMessage = current[0];
         if(!that.playing){
           that.stopPlaying();//念のため
         }else if(!current){
           that.stop();
           $scope.$apply();
-        }else if(current.time < location){
-          that.foreachTrack(function(track){
-            track.putMidi(current.message[0], current.message[1], current.message[2]);
-          });
+        }else if(currentMessage.time < location){
+          currentTrack.putMidi(currentMessage.message[0], currentMessage.message[1], currentMessage.message[2]);
           index++;
           tick();
         }else{
@@ -217,7 +231,9 @@
       this.stopPlaying();
     };
     
-    $scope.programs = [
+    $scope.synths = [];
+    //$scope.synths.push(new Synth('WebModular', 'http://www.g200kg.com/en/docs/webmodular/webmodular.html'));
+    $scope.synths.push(new Synth('GMPlayer', 'http://www.g200kg.com/en/docs/gmplayer/','g200kg', [
       {number:1, description:''},
       {number:2, description:''},
       {number:3, description:''},
@@ -244,12 +260,36 @@
       {number:24, description:''},
       {number:25, description:''},
       {number:26, description:''}
-    ];
-    $scope.synths = [];
-    //$scope.synths.push(new Synth('WebModular', 'http://www.g200kg.com/en/docs/webmodular/webmodular.html'));
-    $scope.synths.push(new Synth('GMPlayer', 'http://www.g200kg.com/en/docs/gmplayer/'));
+    ]));
     //$scope.synths.push(new Synth('WebBridge', 'http://www.g200kg.com/en/docs/webbridge/'));
-    $scope.synths.push(new Synth('WebBeeper', 'http://www.g200kg.com/en/docs/webbeeper/'));
+    $scope.synths.push(new Synth('WebBeeper', 'http://www.g200kg.com/en/docs/webbeeper/','g200kg', [
+      {number:1, description:''},
+      {number:2, description:''},
+      {number:3, description:''},
+      {number:4, description:''},
+      {number:5, description:''},
+      {number:6, description:''},
+      {number:7, description:''},
+      {number:8, description:''},
+      {number:9, description:''},
+      {number:10, description:''},
+      {number:11, description:''},
+      {number:12, description:''},
+      {number:13, description:''},
+      {number:14, description:''},
+      {number:15, description:''},
+      {number:16, description:''},
+      {number:17, description:''},
+      {number:18, description:''},
+      {number:19, description:''},
+      {number:20, description:''},
+      {number:21, description:''},
+      {number:22, description:''},
+      {number:23, description:''},
+      {number:24, description:''},
+      {number:25, description:''},
+      {number:26, description:''}
+    ]));
     //$scope.synths.push(new Synth('WebSynth', 'http://aikelab.net/websynth/'));
     //$scope.synths.push(new Synth('BitMaker', 'http://aikelab.net/bitmaker/'));
     //$scope.synths.push(new Synth('Timbre.js', 'http://script-synthesizer.herokuapp.com/'));
@@ -258,20 +298,33 @@
     //$scope.synths.push(new Synth('Pianoroll', '/pianoroll.html'));
     
     $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+    $scope.selectedTrackId = -1;
     $scope.tracks = [];
     $scope.addTrack = function(synth, channel){
-      synth.load(document.iframe);
-      $scope.tracks[0] = new Track({//とりあえず1trackに
+      console.log(synth.id);
+      console.log(document.iframe);
+      console.log(document.getElementById(synth.id));
+      synth.load(document[synth.id]);
+      
+      var track = new Track({
         name: '_',
         synth: synth,
         channel: channel,
-        program: $scope.programs[0]
+        program: synth.programs[0]
       });
+      $scope.tracks.push(track);//とりあえず1trackに
     };
+    $scope.selectTrack = function(track){
+      $scope.selectedTrackId = track.id;
+    };
+    $scope.trackIsSelected = function(track){
+      return track.id == $scope.selectedTrackId ? 'selected' : null;
+    };
+    
     $scope.messages = [];
     $scope.sequencer = new Sequencer($scope.tracks);
     $scope.keyIsPressed = function(track){
-      return (track.selected && $scope.sequencer.recState && $scope.sequencer.recState.keyIsPressed()) ? 'pressed' : '';
+      return ($scope.trackIsSelected(track) && $scope.sequencer.recState && $scope.sequencer.recState.keyIsPressed()) ? 'pressed' : '';
     };
     $scope.playing = false;
     $scope.rec = function(){
@@ -334,22 +387,27 @@
   </div>
   <div class="tracks">
     <ul>
-      <li ng-repeat="track in tracks" class='track'>
-        <dt class="track_def">
+      <li ng-repeat="track in tracks" class='track {{trackIsSelected(track)}}' ng-click="selectTrack(track)">
+        <div class="track_def">
           <!--<label>{{$index + 1}}</label>-->
           <span class="keyboard {{keyIsPressed(track)}}">■</span> <!--{{track.name}} : -->{{track.synth.name}}
           <select ng-model="track.channel" ng-options="channel for channel in channels"></select>
-          <select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in programs"></select>
+          <select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in track.synth.programs"></select>
           <!--<input type="checkbox" ng-model="track.rec">-->
-        </dt>
-        <dd>
-          <canvas class="pianoroll_summary" id="{{track.id}}" width="800px" height="128px"></canvas>
-        </dd>
+        </div>
+        <div class="pianoroll_summary">
+          <canvas id="{{track.id}}" width="600px" height="128px"></canvas>
+        </div>
       </li>
     </ul>
   </div>
-  <iframe ng-show="showFrame" id="wml_flame" name="iframe" width="900px" height="400px" src="iframe.html"></iframe>
+  <iframe ng-repeat="synth in synths" ng-show="showFrame" name="{{synth.id}}" width="600px" height="400px" src="iframe.html"></iframe>
   <div>
+    
+  <form>
+    <input id="" type="submit" value="Save" ng-disabled="!user"></input>
+  </form>
+    
 <a href="https://twitter.com/share" class="twitter-share-button" data-url="http://jinjor.webmidi.jit.su/" data-via="jinjor" data-lang="ja">ツイート</a>
 <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
 </div>
