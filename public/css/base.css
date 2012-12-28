@@ -32,13 +32,13 @@ li {
 
 
 .track{
-  border-top: solid 1px #666699;
-  border-right: solid 1px #666699;
-  border-bottom: solid 1px #666699;
-  border-left: solid 1px #666699;
+  border: solid 1px #666666;
   width:900px;
   height:140px;
   padding-right: 0px;
+}
+.track.selected{
+  border: solid 1px #666699;
 }
 
 .track_def{

@@ -150,7 +150,7 @@
           if($scope.trackIsSelected(track)){
             var canvas = document.getElementById('' + track.id);
             var ctx = canvas.getContext('2d');
-            ctx.fillStyle = "#ff4444";
+            ctx.fillStyle = "#4444ff";
             ctx.beginPath();
             var x = that.recState.getLocation() * 0.01;
             var y = (127 - m1);
@@ -184,7 +184,7 @@
         };
         this.recState.onElse = function(m0, m1, m2){
           that.foreachTrack(function(track){
-            $scope.trackIsSelected(track) && track.onElse(m0, m1, m2);
+            $scope.trackIsSelected(track) && track.recElse(m0, m1, m2);
           });
         };
       }
@@ -301,10 +301,6 @@
     $scope.selectedTrackId = -1;
     $scope.tracks = [];
     $scope.addTrack = function(synth, channel){
-      console.log(synth.id);
-      console.log(document.iframe);
-      console.log(document.getElementById(synth.id));
-      synth.load(document[synth.id]);
       
       var track = new Track({
         name: '_',
@@ -346,6 +342,14 @@
         });
       }
     });
+    
+    $(document).ready(function(){
+      _($scope.synths).each(function(synth){
+        synth.load(document[synth.id]);
+      });
+    });
+    
+    
   }
   </script>
 
@@ -354,7 +358,9 @@
   <h1>WebMidiLink Sample</h1>
   
   <div ng-show="user">ようこそ {{user}}<a href="/signout">ログアウト</a></div>
+  <!--
   <div ng-show="!user"><a href="/signin/twitter">Twitter認証でログイン</a></div>
+  -->
   <div id="comment">
     <p>MIDIキーボードからWebMidiLinkで音を鳴らすサンプル（つくりかけ）。<br/>MIDI接続には<a href="http://jazz-soft.net/doc/Jazz-Plugin/" target="blank">JazzPlugin</a>が必要です。<br/></p>
     <ul>
@@ -390,8 +396,9 @@
       <li ng-repeat="track in tracks" class='track {{trackIsSelected(track)}}' ng-click="selectTrack(track)">
         <div class="track_def">
           <!--<label>{{$index + 1}}</label>-->
-          <span class="keyboard {{keyIsPressed(track)}}">■</span> <!--{{track.name}} : -->{{track.synth.name}}
-          <select ng-model="track.channel" ng-options="channel for channel in channels"></select>
+          <span class="keyboard {{keyIsPressed(track)}}">■</span> <!--{{track.name}} : {{track.synth.name}}-->
+          <select ng-model="track.synth" ng-options="synth.name for synth in synths"></select>
+          <label>Ch:</label><select ng-model="track.channel" ng-disabled="true" ng-options="channel for channel in channels"></select>
           <select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in track.synth.programs"></select>
           <!--<input type="checkbox" ng-model="track.rec">-->
         </div>
@@ -403,11 +410,11 @@
   </div>
   <iframe ng-repeat="synth in synths" ng-show="showFrame" name="{{synth.id}}" width="600px" height="400px" src="iframe.html"></iframe>
   <div>
-    
+    <!--
   <form>
     <input id="" type="submit" value="Save" ng-disabled="!user"></input>
   </form>
-    
+    -->
 <a href="https://twitter.com/share" class="twitter-share-button" data-url="http://jinjor.webmidi.jit.su/" data-via="jinjor" data-lang="ja">ツイート</a>
 <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
 </div>
