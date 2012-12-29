@@ -6,8 +6,9 @@ var http    = require('http')
     ,express = require('express')
     ,conf    = require('./conf.js')
     ,secret  = require('./secret.js');
-    
-var host = (process.env.APP_MODE === 'debug') ? 'localhost' : conf.host;
+
+var debugMode = process.env.APP_MODE === 'debug';
+var host = debugMode ? 'localhost' : conf.host;
 console.log('host: ' + host);
 
 var app = express();
@@ -30,11 +31,23 @@ var oauth = new (require('oauth').OAuth)(
     secret.twitter.consumerKey, // consumer key
     secret.twitter.consumerSecret, // consumer secret
     '1.0',
-    'http://' + host + ':' + 80 + '/signin/twitter', // callback URL
+    'http://' + host + ':' + (debugMode ? conf.port : 80) + '/signin/twitter', // callback URL
     'HMAC-SHA1'
 );
 
-app.get('/', function(req, res){
+var redis = (function(){
+  if (process.env.REDISTOGO_URL) {
+    var rtg   = require("url").parse(process.env.REDISTOGO_URL);
+    var redis = require("redis").createClient(rtg.port, rtg.hostname);
+    redis.auth(rtg.auth.split(":")[1]); 
+    return redis;
+  } else {
+    return require("redis").createClient();
+  }
+})();
+
+
+app.get(/\/tunes\/.+/, function(req, res){
   console.log('user:' + req.session.user);
   res.writeHead(200, {'Content-Type': 'text/html'});
   var rs = fs.createReadStream('index.html');
@@ -43,7 +56,6 @@ app.get('/', function(req, res){
 app.get('/session', function(req, res){
   res.send(req.session.user);
 });
-
 app.get('/signin/twitter', function(req, res) {
     var oauth_token    = req.query.oauth_token;
     var oauth_verifier = req.query.oauth_verifier;
@@ -56,7 +68,7 @@ app.get('/signin/twitter', function(req, res) {
             res.send(error, 500);
           } else {
             req.session.user = results.screen_name;
-            res.redirect('/');
+            res.redirect('/tunes/hoge');//TODO
           }
         }
       );
@@ -80,6 +92,31 @@ app.get('/signout', function(req, res) {
         res.redirect('/');
     });
 });
+
+app.post('/saveContents', function(req, res){
+  var user = req.session.user;
+  if(!user){
+    res.send('', 400);
+  }else{
+    var address = req.body.address;
+    var contents = req.body.contents;
+    redis.set(address, contents, function(e){
+      e && console.log(e);
+      res.send(contents);
+    });
+  }
+});
+app.get('/contents/:address', function(req, res){
+  var address = req.params.address;
+  redis.get(address, function(e, contents){
+    if(e){
+      res.send(e, 500);
+    }else{
+      res.send(contents);
+    }
+  });
+});
+
 
 var server = http.createServer(app);
 server.listen(conf.port, function(){

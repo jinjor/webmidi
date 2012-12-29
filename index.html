@@ -84,16 +84,18 @@
     return ++trackId;
   };
   var Track = function(arg){
+    console.log(arg)
     this.id = createTrackId();
     this.name = arg.name;
-    this.synth = arg.synth;
+    this.synth = arg.synth.sy ? arg.synth : $scope.synths[arg.synth.name];
     this.channel = arg.channel || 1;
     this.program = arg.program || 1;
+    this.program = this.synth.programs[0];
     this.selected = true;
-    this.messages = [
+    this.messages = arg.messages || [
       {time: 1000 * 60 * 10, message: [0x80, 62, 0]}
     ];
-    this.notes = [];
+    this.notes = arg.notes || [];
   };
   Track.prototype.recNote = function(note, velocity, startTime, endTime){
     this.messages.push({time: startTime, message: [0x90, note, velocity]});
@@ -116,12 +118,13 @@
     this.synth.allSoundOff();
   };
   Track.prototype.putMidi = function(m0, m1, m2){
-    console.log(this.id);
-    console.log(this.program);
     this.synth.sendMidiMessage(m0 + this.channel - 1, m1, m2);//キーボードからはchannel1で来る前提
   };
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
+    
+    
+    $scope.address = location.href.split('/tunes/', 2)[1];
     $scope.showFrame = false;
     $scope.connection = 'disconnected';
     $scope.echoms = '';
@@ -129,6 +132,7 @@
     $http({method: 'GET', url: '/session'}).success(function(user) {
       $scope.user = user;
     });
+    
     
     var Sequencer = function(tracks){
       this.location = 0;
@@ -230,8 +234,8 @@
       this.stopPlaying();
     };
     
-    $scope.synths = [];
-    $scope.synths.push(new Synth('GMPlayer', 'http://www.g200kg.com/en/docs/gmplayer/','g200kg', [
+    $scope.synths = {};
+    $scope.synths.GMPlayer = new Synth('GMPlayer', 'http://www.g200kg.com/en/docs/gmplayer/','g200kg', [
       {number:1, description:''},
       {number:2, description:''},
       {number:3, description:''},
@@ -258,8 +262,8 @@
       {number:24, description:''},
       {number:25, description:''},
       {number:26, description:''}
-    ]));
-    $scope.synths.push(new Synth('WebBeeper', 'http://www.g200kg.com/en/docs/webbeeper/','g200kg', [
+    ]);
+    $scope.synths.WebBeeper = new Synth('WebBeeper', 'http://www.g200kg.com/en/docs/webbeeper/','g200kg', [
       {number:1, description:''},
       {number:2, description:''},
       {number:3, description:''},
@@ -286,7 +290,7 @@
       {number:24, description:''},
       {number:25, description:''},
       {number:26, description:''}
-    ]));
+    ]);
     //$scope.synths.push(new Synth('WebModular', 'http://www.g200kg.com/en/docs/webmodular/webmodular.html'));
     //$scope.synths.push(new Synth('WebBridge', 'http://www.g200kg.com/en/docs/webbridge/'));
     //$scope.synths.push(new Synth('WebSynth', 'http://aikelab.net/websynth/'));
@@ -295,17 +299,68 @@
     //$scope.synths.push(new Synth('Beatonica', 'http://beatonica.com/'));
     //$scope.synths.push(new Synth('Webitaur', 'http://www.angryoctopus.co.nz/synth16/'));
     //$scope.synths.push(new Synth('Pianoroll', '/pianoroll.html'));
+    $scope.synthsAsArray = function(){
+      return _.values($scope.synths);
+    };
     
     $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
     $scope.selectedTrackId = -1;
     $scope.tracks = [];
-    $scope.addTrack = function(synth, channel){
+    
+    
+    $scope.saveContents = function(){
+      _($scope.tracks).each(function(track){
+        track.synth.sy = null;
+      });
       
+      $http({method: 'POST', url: '/saveContents', data: {
+        address: $scope.address,
+        contents: JSON.stringify($scope.tracks)
+      }}).success(function() {
+        alert('saveしました')
+      }).error(function(e) {
+        alert(e);
+      });
+    };
+    $http({method: 'GET', url: '/contents/' + $scope.address}).success(function(tracks) {
+      console.log(tracks);
+      $scope.tracks = tracks ? _(tracks).map(function(_track){
+        _track.synth = $scope.synths[_track.synth.name];
+        var track = new Track(_track);
+        return track;
+      }) : [];
+      
+      trackId = tracks.length + 1;
+      $scope.sequencer = new Sequencer($scope.tracks);
+      
+      _($scope.synths).each(function(synth){
+        synth.load(document[synth.id]);
+      });
+      setTimeout(function(){
+        _($scope.tracks).each(function(track){
+          var canvas = document.getElementById('' + track.id);
+          var ctx = canvas.getContext('2d');
+            ctx.fillStyle = "#4444ff";
+            ctx.beginPath();
+          _(track.messages).each(function(message){
+            
+            var x1 = message.time * 0.01;
+            var y1 = (127 - message.message[1]);
+            console.log(x1);
+            console.log(y1);
+            ctx.fillRect(x1, y1, 2, 2);
+          });
+        });
+      },20);
+      
+    }).error(function(e) {
+      alert(e);
+    });
+    $scope.addTrack = function(synth, channel){
       var track = new Track({
         name: '_',
         synth: synth,
-        channel: channel,
-        program: synth.programs[0]
+        channel: channel
       });
       $scope.tracks.push(track);//とりあえず1trackに
     };
@@ -315,9 +370,8 @@
     $scope.trackIsSelected = function(track){
       return track.id == $scope.selectedTrackId ? 'selected' : null;
     };
-    
+      
     $scope.messages = [];
-    $scope.sequencer = new Sequencer($scope.tracks);
     $scope.keyIsPressed = function(track){
       return ($scope.trackIsSelected(track) && $scope.sequencer.recState && $scope.sequencer.recState.keyIsPressed()) ? 'pressed' : '';
     };
@@ -330,7 +384,7 @@
     };
     $scope.stop = function(){
       $scope.sequencer.stop();
-    }
+    };
     
     jazz.onMessage(function(t, m0, m1, m2){
       if(m0 == 248){
@@ -341,6 +395,7 @@
         });
       }
     });
+    
     
     $(document).ready(function(){
       _($scope.synths).each(function(synth){
@@ -354,8 +409,7 @@
 
 </head>
 <body ng-controller="KeyboardCtrl" >
-  <h1>WebMidiLink Sample</h1>
-  
+  <h1>♪ {{address}}</h1>
   <div ng-show="user">ようこそ {{user}}<a href="/signout">ログアウト</a></div>
   <div ng-show="!user"><a href="/signin/twitter">Twitter認証でログイン</a></div>
   <div id="comment">
@@ -394,7 +448,8 @@
         <div class="track_def">
           <!--<label>{{$index + 1}}</label>-->
           <span class="keyboard {{keyIsPressed(track)}}">■</span> <!--{{track.name}} : {{track.synth.name}}-->
-          <select ng-model="track.synth" ng-options="synth.name for synth in synths"></select>
+                                                                    
+          <select ng-model="track.synth" ng-options="synth.name for synth in synthsAsArray()"></select>
           <label>Ch:</label><select ng-model="track.channel" ng-disabled="false" ng-options="channel for channel in channels"></select>
           <select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in track.synth.programs"></select>
           <!--<input type="checkbox" ng-model="track.rec">-->
@@ -407,7 +462,7 @@
   </div>
   <iframe ng-repeat="synth in synths" ng-show="showFrame" name="{{synth.id}}" width="600px" height="400px" src="iframe.html"></iframe>
   <div>
-  <form>
+  <form ng-submit="saveContents()">
     <input id="" type="submit" value="Save" ng-disabled="!user"></input>
   </form>
 <a href="https://twitter.com/share" class="twitter-share-button" data-url="http://jinjor.webmidi.jit.su/" data-via="jinjor" data-lang="ja">ツイート</a>
