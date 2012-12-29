@@ -40,8 +40,14 @@
       this.sendMessage('midi,' + m0.toString(16) +','+ m1.toString(16)+','+ m2.toString(16));
     };
     Synth.prototype.sendMessage = function(s) {
-      if(this.sy)
-          this.sy.postMessage(s, "*");
+      if(this.sy){
+        console.log('a')
+        this.sy.postMessage(s, "*");
+      }
+          
+    };
+    Synth.prototype.programsAsArray = function(){
+      return _.values(this.programs);
     };
     return Synth;
   });
@@ -83,19 +89,23 @@
   function createTrackId(){
     return ++trackId;
   };
-  var Track = function(arg){
+  var Track = function(arg, rerender){
     console.log(arg)
     this.id = createTrackId();
     this.name = arg.name;
-    this.synth = arg.synth.sy ? arg.synth : $scope.synths[arg.synth.name];
+    this.synth = arg.synth;
     this.channel = arg.channel || 1;
-    this.program = arg.program || 1;
-    this.program = this.synth.programs[0];
+    this.program = arg.program ? this.synth.programs[arg.program.number] : this.synth.programs[0];
     this.selected = true;
     this.messages = arg.messages || [
       {time: 1000 * 60 * 10, message: [0x80, 62, 0]}
     ];
     this.notes = arg.notes || [];
+    var that = this;
+    this.rerender = function(){
+      rerender(that);
+    };
+    this.programChange(this.program.number);
   };
   Track.prototype.recNote = function(note, velocity, startTime, endTime){
     this.messages.push({time: startTime, message: [0x90, note, velocity]});
@@ -111,7 +121,7 @@
     this.putMidi(0x80, note, 0);
   };
   Track.prototype.programChange = function(number) {
-    console.log(number);
+    console.log([number, this.channel]);
     this.putMidi(0xc0, number, 0);
   };
   Track.prototype.allSoundOff = function() {
@@ -120,10 +130,15 @@
   Track.prototype.putMidi = function(m0, m1, m2){
     this.synth.sendMidiMessage(m0 + this.channel - 1, m1, m2);//キーボードからはchannel1で来る前提
   };
+  Track.prototype.deleteAll = function(){
+    this.messages = [
+      {time: 1000 * 60 * 10, message: [0x80, 62, 0]}
+    ];
+    this.notes = [];
+    this.rerender();
+  };
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
-    
-    
     $scope.address = location.href.split('/tunes/', 2)[1];
     $scope.showFrame = false;
     $scope.connection = 'disconnected';
@@ -235,62 +250,62 @@
     };
     
     $scope.synths = {};
-    $scope.synths.GMPlayer = new Synth('GMPlayer', 'http://www.g200kg.com/en/docs/gmplayer/','g200kg', [
-      {number:1, description:''},
-      {number:2, description:''},
-      {number:3, description:''},
-      {number:4, description:''},
-      {number:5, description:''},
-      {number:6, description:''},
-      {number:7, description:''},
-      {number:8, description:''},
-      {number:9, description:''},
-      {number:10, description:''},
-      {number:11, description:''},
-      {number:12, description:''},
-      {number:13, description:''},
-      {number:14, description:''},
-      {number:15, description:''},
-      {number:16, description:''},
-      {number:17, description:''},
-      {number:18, description:''},
-      {number:19, description:''},
-      {number:20, description:''},
-      {number:21, description:''},
-      {number:22, description:''},
-      {number:23, description:''},
-      {number:24, description:''},
-      {number:25, description:''},
-      {number:26, description:''}
-    ]);
-    $scope.synths.WebBeeper = new Synth('WebBeeper', 'http://www.g200kg.com/en/docs/webbeeper/','g200kg', [
-      {number:1, description:''},
-      {number:2, description:''},
-      {number:3, description:''},
-      {number:4, description:''},
-      {number:5, description:''},
-      {number:6, description:''},
-      {number:7, description:''},
-      {number:8, description:''},
-      {number:9, description:''},
-      {number:10, description:''},
-      {number:11, description:''},
-      {number:12, description:''},
-      {number:13, description:''},
-      {number:14, description:''},
-      {number:15, description:''},
-      {number:16, description:''},
-      {number:17, description:''},
-      {number:18, description:''},
-      {number:19, description:''},
-      {number:20, description:''},
-      {number:21, description:''},
-      {number:22, description:''},
-      {number:23, description:''},
-      {number:24, description:''},
-      {number:25, description:''},
-      {number:26, description:''}
-    ]);
+    $scope.synths.GMPlayer = new Synth('GMPlayer', 'http://www.g200kg.com/en/docs/gmplayer/','g200kg', {
+      1:{number:1, description:''},
+      2:{number:2, description:''},
+      3:{number:3, description:''},
+      4:{number:4, description:''},
+      5:{number:5, description:''},
+      6:{number:6, description:''},
+      7:{number:7, description:''},
+      8:{number:8, description:''},
+      9:{number:9, description:''},
+      10:{number:10, description:''},
+      11:{number:11, description:''},
+      12:{number:12, description:''},
+      13:{number:13, description:''},
+      14:{number:14, description:''},
+      15:{number:15, description:''},
+      16:{number:16, description:''},
+      17:{number:17, description:''},
+      18:{number:18, description:''},
+      19:{number:19, description:''},
+      20:{number:20, description:''},
+      21:{number:21, description:''},
+      22:{number:22, description:''},
+      23:{number:23, description:''},
+      24:{number:24, description:''},
+      25:{number:25, description:''},
+      26:{number:26, description:''}
+    });
+    $scope.synths.WebBeeper = new Synth('WebBeeper', 'http://www.g200kg.com/en/docs/webbeeper/','g200kg', {
+      1:{number:1, description:''},
+      2:{number:2, description:''},
+      3:{number:3, description:''},
+      4:{number:4, description:''},
+      5:{number:5, description:''},
+      6:{number:6, description:''},
+      7:{number:7, description:''},
+      8:{number:8, description:''},
+      9:{number:9, description:''},
+      10:{number:10, description:''},
+      11:{number:11, description:''},
+      12:{number:12, description:''},
+      13:{number:13, description:''},
+      14:{number:14, description:''},
+      15:{number:15, description:''},
+      16:{number:16, description:''},
+      17:{number:17, description:''},
+      18:{number:18, description:''},
+      19:{number:19, description:''},
+      20:{number:20, description:''},
+      21:{number:21, description:''},
+      22:{number:22, description:''},
+      23:{number:23, description:''},
+      24:{number:24, description:''},
+      25:{number:25, description:''},
+      26:{number:26, description:''}
+    });
     //$scope.synths.push(new Synth('WebModular', 'http://www.g200kg.com/en/docs/webmodular/webmodular.html'));
     //$scope.synths.push(new Synth('WebBridge', 'http://www.g200kg.com/en/docs/webbridge/'));
     //$scope.synths.push(new Synth('WebSynth', 'http://aikelab.net/websynth/'));
@@ -322,12 +337,24 @@
         alert(e);
       });
     };
+    var rerenderTrack = function(track){
+      var canvas = document.getElementById('' + track.id);
+      var ctx = canvas.getContext('2d');
+      ctx.clearRect(0,0, canvas.width, canvas.height);
+      ctx.fillStyle = "#4444ff";
+      ctx.beginPath();
+      _(track.messages).each(function(message){
+        var x1 = message.time * 0.01;
+        var y1 = (127 - message.message[1]);
+        ctx.fillRect(x1, y1, 2, 2);
+      });
+    };
+    
     $http({method: 'GET', url: '/contents/' + $scope.address}).success(function(tracks) {
       console.log(tracks);
       $scope.tracks = tracks ? _(tracks).map(function(_track){
         _track.synth = $scope.synths[_track.synth.name];
-        var track = new Track(_track);
-        return track;
+        return new Track(_track, rerenderTrack);
       }) : [];
       
       trackId = tracks.length + 1;
@@ -338,18 +365,7 @@
       });
       setTimeout(function(){
         _($scope.tracks).each(function(track){
-          var canvas = document.getElementById('' + track.id);
-          var ctx = canvas.getContext('2d');
-            ctx.fillStyle = "#4444ff";
-            ctx.beginPath();
-          _(track.messages).each(function(message){
-            
-            var x1 = message.time * 0.01;
-            var y1 = (127 - message.message[1]);
-            console.log(x1);
-            console.log(y1);
-            ctx.fillRect(x1, y1, 2, 2);
-          });
+          track.rerender();
         });
       },20);
       
@@ -361,7 +377,7 @@
         name: '_',
         synth: synth,
         channel: channel
-      });
+      }, rerenderTrack);
       $scope.tracks.push(track);//とりあえず1trackに
     };
     $scope.selectTrack = function(track){
@@ -395,7 +411,6 @@
         });
       }
     });
-    
     
     $(document).ready(function(){
       _($scope.synths).each(function(synth){
@@ -451,8 +466,11 @@
                                                                     
           <select ng-model="track.synth" ng-options="synth.name for synth in synthsAsArray()"></select>
           <label>Ch:</label><select ng-model="track.channel" ng-disabled="false" ng-options="channel for channel in channels"></select>
-          <select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in track.synth.programs"></select>
+          <label>Prg:</label><select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in track.synth.programsAsArray()"></select>
           <!--<input type="checkbox" ng-model="track.rec">-->
+          <form ng-submit="track.deleteAll()">
+            <input type="submit" value="Delete"></input>
+          </form>
         </div>
         <div class="pianoroll_summary">
           <canvas id="{{track.id}}" width="600px" height="128px"></canvas>
