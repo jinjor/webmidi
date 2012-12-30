@@ -41,7 +41,7 @@ var DbManager = (dbType == 'mongo') ? function(){
   var mongoose = require('mongoose');
   var Schema = mongoose.Schema
     , ObjectId = Schema.ObjectId;
-  mongoose.connect(process.env.MONGOHQ_URL ||　secret.mongo.url || 'mongodb://localhost/web-midi');//heroku, nodejitsu, local
+  mongoose.connect(process.env.MONGOHQ_URL ||　'mongodb://localhost/web-midi');//heroku, nodejitsu, local
   mongoose.model('tunes', new Schema({
       address: { type: String, unique: true },
       tracks: String
