@@ -120,8 +120,7 @@
     this.putMidi(0x80, note, 0);
   };
   Track.prototype.programChange = function(number) {
-    console.log([number, this.channel]);
-    this.putMidi(0xc0, number, 0);
+    this.putMidi(0xc0, number || this.program.number, 0);
   };
   Track.prototype.allSoundOff = function() {
     this.synth.allSoundOff();
@@ -216,7 +215,10 @@
       messageTrackPairs.sort(function(a, b){
         return a[0].time - b[0].time;
       });
-      console.log(messageTrackPairs);
+      //console.log(messageTrackPairs);
+      that.foreachTrack(function(track){
+        track.programChange();//synthロード後にダメ押し
+      });
       var index = 0;
       var current;
       var currentTrack;

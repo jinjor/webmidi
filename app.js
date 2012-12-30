@@ -53,7 +53,7 @@ var DbManager = (dbType == 'mongo') ? function(){
   }
   
   mongoose.model('tunes', new Schema({
-      address: { type: String, unique: true },
+      address: { type: String, index: {unique: true, dropDups: true} },
       tracks: String
   }));
   
@@ -69,11 +69,18 @@ var DbManager = (dbType == 'mongo') ? function(){
       });
     },
     saveTune: function(address, contents, callback){
-      console.log(contents);
-      var tune = new Tune();
-      tune.address = address;
-      tune.tracks = contents;
-      tune.save(callback);
+      Tune.findOne({address: address}, function(e, tune){
+        if(e){
+          console.log(e);
+          throw e;
+        }
+        if(!tune){
+          tune = new Tune();
+        }
+        tune.address = address;
+        tune.tracks = contents;
+        tune.save(callback);
+      });
     }
   }
 } : function(){
