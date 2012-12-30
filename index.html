@@ -141,6 +141,7 @@
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
     $scope.address = location.href.split('/tunes/', 2)[1];
+    document.title = $scope.address + " - WebMidiLink Sample";
     $scope.showFrame = false;
     $scope.connection = 'disconnected';
     $scope.echoms = '';
@@ -486,7 +487,7 @@
   <form ng-submit="saveContents()">
     <input id="" type="submit" value="Save" ng-disabled="!user"></input>
   </form>
-<a href="https://twitter.com/share" class="twitter-share-button" data-url="http://jinjor.webmidi.jit.su/" data-via="jinjor" data-lang="ja">ツイート</a>
+<a href="https://twitter.com/share" class="twitter-share-button" data-text="{{address}} #WebMidiLink" data-url="http://jinjor.webmidi.jit.su/tunes/{{address}}" data-lang="ja">ツイート</a>
 <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
 </div>
 <footer id="footer">
