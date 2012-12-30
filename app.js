@@ -41,7 +41,18 @@ var DbManager = (dbType == 'mongo') ? function(){
   var mongoose = require('mongoose');
   var Schema = mongoose.Schema
     , ObjectId = Schema.ObjectId;
-  mongoose.connect(process.env.MONGOHQ_URL ||　'mongodb://localhost/web-midi');//heroku, nodejitsu, local
+  if(debugMode){
+    //local
+    mongoose.connect('mongodb://localhost/web-midi');
+  }else if(process.env.MONGOHQ_URL){
+    //heroku
+    mongoose.connect(process.env.MONGOHQ_URL);
+  }else{
+    //nodejitsu
+    mongoose.connect('mongodb://' + secret.mongo.user + ':' + secret.mongo.pass + '@' +
+      secret.mongo.host + '/web-midi');
+  }
+  
   mongoose.model('tunes', new Schema({
       address: { type: String, unique: true },
       tracks: String
