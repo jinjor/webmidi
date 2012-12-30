@@ -43,19 +43,26 @@ var DbManager = (dbType == 'mongo') ? function(){
     , ObjectId = Schema.ObjectId;
   mongoose.connect(process.env.MONGOHQ_URL ||　secret.mongo.url || 'mongodb://localhost/web-midi');//heroku, nodejitsu, local
   mongoose.model('tunes', new Schema({
-      address: ObjectId,
-      tracks: [String]
+      address: { type: String, unique: true },
+      tracks: String
   }));
   
   var Tune = mongoose.model('tunes');
   this.tuneDao = {
     loadTune: function(address, callback){
-      Tune.findById(address, callback);
+      Tune.findOne({address: address}, function(e, tune){
+        if(e){
+          callback(e);
+        }else{
+          callback(e, tune ? tune.tracks : null);
+        }
+      });
     },
     saveTune: function(address, contents, callback){
+      console.log(contents);
       var tune = new Tune();
       tune.address = address;
-      tune.contents = contents;
+      tune.tracks = contents;
       tune.save(callback);
     }
   }
@@ -145,8 +152,10 @@ app.get('/contents/:address', function(req, res){
   var address = req.params.address;
   tuneDao.loadTune(address, function(e, contents){
     if(e){
+      console.log(e);
       res.send(e, 500);
     }else{
+      console.log(contents);
       res.send(contents);
     }
   });
