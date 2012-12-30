@@ -428,8 +428,8 @@
 </head>
 <body ng-controller="KeyboardCtrl" >
   <h1>♪ {{address}}</h1>
-  <div ng-show="user">ようこそ {{user}}<a href="/signout">ログアウト</a></div>
-  <div ng-show="!user"><a href="/signin/twitter">Twitter認証でログイン</a></div>
+  <div ng-show="user">ようこそ {{user}}<a href="/signout/{{address}}">ログアウト</a></div>
+  <div ng-show="!user"><a href="/signin/twitter/{{address}}">Twitter認証でログイン</a></div>
   <div id="comment">
     <p>MIDIキーボードからWebMidiLinkで音を鳴らすサンプル（つくりかけ）。<br/>MIDI接続には<a href="http://jazz-soft.net/doc/Jazz-Plugin/" target="blank">JazzPlugin</a>が必要です。<br/></p>
     <ul>

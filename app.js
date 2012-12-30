@@ -24,16 +24,7 @@ app.configure(function(){
   app.use(express.static(path.join(__dirname, 'public')));
   app.use(express.errorHandler());
 });
-
-var oauth = new (require('oauth').OAuth)(
-    'https://api.twitter.com/oauth/request_token',
-    'https://api.twitter.com/oauth/access_token',
-    secret.twitter.consumerKey, // consumer key
-    secret.twitter.consumerSecret, // consumer secret
-    '1.0',
-    'http://' + host + ':' + (debugMode ? conf.port : 80) + '/signin/twitter', // callback URL
-    'HMAC-SHA1'
-);
+var _oauth = require('oauth');
 
 
 var dbType = 'mongo';
@@ -115,7 +106,17 @@ app.get(/\/tunes\/.+/, function(req, res){
 app.get('/session', function(req, res){
   res.send(req.session.user);
 });
-app.get('/signin/twitter', function(req, res) {
+app.get('/signin/twitter/:address', function(req, res) {
+    var address = req.params.address;
+    var oauth = new (_oauth.OAuth)(
+      'https://api.twitter.com/oauth/request_token',
+      'https://api.twitter.com/oauth/access_token',
+      secret.twitter.consumerKey, // consumer key
+      secret.twitter.consumerSecret, // consumer secret
+      '1.0',
+      'http://' + host + ':' + (debugMode ? conf.port : 80) + '/signin/twitter/' + address, // callback URL
+      'HMAC-SHA1'
+    );
     var oauth_token    = req.query.oauth_token;
     var oauth_verifier = req.query.oauth_verifier;
     
@@ -127,7 +128,7 @@ app.get('/signin/twitter', function(req, res) {
             res.send(error, 500);
           } else {
             req.session.user = results.screen_name;
-            res.redirect('/tunes/hoge');//TODO
+            res.redirect('/tunes/' + address);
           }
         }
       );
@@ -146,9 +147,9 @@ app.get('/signin/twitter', function(req, res) {
       });
     }
 });
-app.get('/signout', function(req, res) {
+app.get('/signout/:address', function(req, res) {
     req.session.destroy(function() {
-        res.redirect('/');
+        res.redirect('/tunes/' + req.params.address);
     });
 });
 
