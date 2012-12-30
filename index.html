@@ -41,7 +41,6 @@
     };
     Synth.prototype.sendMessage = function(s) {
       if(this.sy){
-        console.log('a')
         this.sy.postMessage(s, "*");
       }
           
@@ -95,7 +94,7 @@
     this.name = arg.name;
     this.synth = arg.synth;
     this.channel = arg.channel || 1;
-    this.program = arg.program ? this.synth.programs[arg.program.number] : this.synth.programs[0];
+    this.program = arg.program ? this.synth.programs[arg.program.number] : this.synth.programs[1];
     this.selected = true;
     this.messages = arg.messages || [
       {time: 1000 * 60 * 10, message: [0x80, 62, 0]}
@@ -137,6 +136,9 @@
     this.notes = [];
     this.rerender();
   };
+  Track.prototype.onChangeSynth = function(){
+    this.program = this.synth.programs[1];
+  };
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
     $scope.address = location.href.split('/tunes/', 2)[1];
@@ -147,7 +149,6 @@
     $http({method: 'GET', url: '/session'}).success(function(user) {
       $scope.user = user;
     });
-    
     
     var Sequencer = function(tracks){
       this.location = 0;
@@ -464,7 +465,7 @@
           <!--<label>{{$index + 1}}</label>-->
           <span class="keyboard {{keyIsPressed(track)}}">■</span> <!--{{track.name}} : {{track.synth.name}}-->
                                                                     
-          <select ng-model="track.synth" ng-options="synth.name for synth in synthsAsArray()"></select>
+          <select ng-model="track.synth" ng-change="track.onChangeSynth()" ng-options="synth.name for synth in synthsAsArray()"></select>
           <label>Ch:</label><select ng-model="track.channel" ng-disabled="false" ng-options="channel for channel in channels"></select>
           <label>Prg:</label><select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in track.synth.programsAsArray()"></select>
           <!--<input type="checkbox" ng-model="track.rec">-->

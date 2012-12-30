@@ -35,17 +35,52 @@ var oauth = new (require('oauth').OAuth)(
     'HMAC-SHA1'
 );
 
-var redis = (function(){
-  if (process.env.REDISTOGO_URL) {
-    var rtg   = require("url").parse(process.env.REDISTOGO_URL);
-    var redis = require("redis").createClient(rtg.port, rtg.hostname);
-    redis.auth(rtg.auth.split(":")[1]); 
-    return redis;
-  } else {
-    return require("redis").createClient();
-  }
-})();
 
+var dbType = 'mongo';
+var DbManager = (dbType == 'mongo') ? function(){
+  var mongoose = require('mongoose');
+  var Schema = mongoose.Schema
+    , ObjectId = Schema.ObjectId;
+  mongoose.connect(process.env.MONGOHQ_URL ||　secret.mongo.url || 'mongodb://localhost/web-midi');//heroku, nodejitsu, local
+  mongoose.model('tunes', new Schema({
+      address: ObjectId,
+      tracks: [String]
+  }));
+  
+  var Tune = mongoose.model('tunes');
+  this.tuneDao = {
+    loadTune: function(address, callback){
+      Tune.findById(address, callback);
+    },
+    saveTune: function(address, contents, callback){
+      var tune = new Tune();
+      tune.address = address;
+      tune.contents = contents;
+      tune.save(callback);
+    }
+  }
+} : function(){
+  var redis = (function(){
+    if (process.env.REDISTOGO_URL) {
+      var rtg   = require("url").parse(process.env.REDISTOGO_URL);
+      var redis = require("redis").createClient(rtg.port, rtg.hostname);
+      redis.auth(rtg.auth.split(":")[1]); 
+      return redis;
+    } else {
+      return require("redis").createClient();
+    }
+  })();
+  this.tuneDao = {
+    loadTune: function(address, callback){
+      redis.get(address, callback);
+    },
+    saveTune: function(address, contents, callback){
+      redis.set(address, contents, callback);
+    }
+  }
+};
+var dbManager = new DbManager();
+var tuneDao = dbManager.tuneDao;
 
 app.get(/\/tunes\/.+/, function(req, res){
   console.log('user:' + req.session.user);
@@ -100,7 +135,7 @@ app.post('/saveContents', function(req, res){
   }else{
     var address = req.body.address;
     var contents = req.body.contents;
-    redis.set(address, contents, function(e){
+    tuneDao.saveTune(address, contents, function(e){
       e && console.log(e);
       res.send(contents);
     });
@@ -108,7 +143,7 @@ app.post('/saveContents', function(req, res){
 });
 app.get('/contents/:address', function(req, res){
   var address = req.params.address;
-  redis.get(address, function(e, contents){
+  tuneDao.loadTune(address, function(e, contents){
     if(e){
       res.send(e, 500);
     }else{

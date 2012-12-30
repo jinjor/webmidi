@@ -11,6 +11,7 @@
     "ejs": "*",
     "socket.io": "*",
     "redis": "0.6.0",
+    "mongoose": "*",
     "underscore": "*",
     "async": "*",
     "oauth": "*"
