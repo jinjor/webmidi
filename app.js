@@ -49,8 +49,7 @@ var DbManager = (dbType == 'mongo') ? function(){
     mongoose.connect(process.env.MONGOHQ_URL);
   }else{
     //nodejitsu
-    mongoose.connect('mongodb://' + secret.mongo.user + ':' + secret.mongo.pass + '@' +
-      secret.mongo.host + '/web-midi');
+    mongoose.connect(secret.mongo.uri);
   }
   
   mongoose.model('tunes', new Schema({
