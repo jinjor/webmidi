@@ -2,6 +2,7 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <title>WebMidiLink Sample</title>
+  <script src="/socket.io/socket.io.js"></script>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
   <script type="text/javascript" src="/js/angular.min.js"></script>
   <script type="text/javascript" src="/js/underscore-min.js"></script>
@@ -10,7 +11,7 @@
   
   <link rel="stylesheet" type="text/css" href="/css/base.css"/>
   <script type="text/javascript">
-  
+
   var module = angular.module('brouserSynth', []);
   JazzPlugin.attachTo(module);
   var id = 0;
@@ -50,6 +51,7 @@
     };
     return Synth;
   });
+
   
   var RecState = function() {
     this.keyCount = 0;
@@ -140,6 +142,28 @@
   };
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
+    var socket = io.connect('/');
+    socket.on('connect', function() {
+      $scope.connection = 'connected';
+      console.log('connected');
+      socket.on('disconnect', function() {
+        $scope.connection = 'disconnected';
+        $scope.echoms = '';
+      });
+      socket.on('midi', function(abc){
+        var splitted = abc.split(',');
+        var a = parseInt(splitted[0]);
+        var b = parseInt(splitted[1]);
+        var c = parseInt(splitted[2]);
+        midiProcCommon(a,b,c);
+      });
+      socket.on('echo', function(message){
+        $scope.echoms = '(echo:' + (new Date().getMilliseconds() - parseInt(message)) + 'ms)';
+      });
+      socket.emit('echo', new Date().getMilliseconds());
+    });
+  
+  
     $scope.address = location.href.split('/tunes/', 2)[1];
     document.title = $scope.address + " - WebMidiLink Sample";
     $scope.showFrame = false;
