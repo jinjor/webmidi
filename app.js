@@ -5,7 +5,17 @@ var http    = require('http')
     ,io	     = require('socket.io')
     ,express = require('express')
     ,conf    = require('./conf.js')
-    ,secret  = require('./secret.js');
+    ,secret  = require('./secret.js')
+    ,log4js  = require('log4js');
+    
+log4js.configure({
+	appenders: [{
+	"type": "dateFile",
+	"filename": "log/access.log",
+	"pattern": "-yyyy-MM-dd"
+	}]
+});
+var logger = log4js.getLogger('dateFile');
 
 var debugMode = process.env.APP_MODE === 'debug';
 var host = debugMode ? 'localhost' : conf.host;
@@ -188,8 +198,10 @@ server.listen(conf.port, function(){
 });
 
 io.listen(server).sockets.on('connection', function (socket) {
-  //socket.emit('news', { hello: 'world' });
-  socket.on('z_g', function (data) {
-    socket.emit('z_g', data);
+  console.log('connected!');
+  //console.log(socket);
+  socket.on('y_g', function (data) {
+    socket.emit('y_g', data);
+    socket.broadcast.emit('y_g', data);
   });
 });

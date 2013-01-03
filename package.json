@@ -9,12 +9,13 @@
   "dependencies": {
     "express": "3.0.0rc4",
     "ejs": "*",
-    "socket.io": "*",
+    "socket.io": "0.9.13",
     "redis": "0.6.0",
     "mongoose": "*",
     "underscore": "*",
     "async": "*",
-    "oauth": "*"
+    "oauth": "*",
+    "log4js": "*"
   },
   "subdomain": "jinjor.webmidi",
   "scripts": {
