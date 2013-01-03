@@ -190,6 +190,6 @@ server.listen(conf.port, function(){
 io.listen(server).sockets.on('connection', function (socket) {
   //socket.emit('news', { hello: 'world' });
   socket.on('z_g', function (data) {
-    console.log(data);
+    socket.emit('z_g', data);
   });
 });

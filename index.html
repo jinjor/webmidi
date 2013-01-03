@@ -144,29 +144,51 @@
   function KeyboardCtrl($scope, $http, Synth, jazz) {
     var socket = io.connect('/');
     socket.on('connect', function() {
+      alert('connected');
       $scope.connection = 'connected';
       console.log('connected');
       socket.on('disconnect', function() {
         $scope.connection = 'disconnected';
         $scope.echoms = '';
       });
-      socket.on('z_g', function(data){
-        console.log(data);
-      });
+      
       socket.on('echo', function(message){
         $scope.echoms = '(echo:' + (new Date().getMilliseconds() - parseInt(message)) + 'ms)';
       });
       socket.emit('echo', new Date().getMilliseconds());
     });
-    window.addEventListener('devicemotion', function(event) {
-      var x = event.acceleration.x; // X軸の加速度
-      var y = event.acceleration.y; // Y軸の加速度
-      var z = event.acceleration.z; // Z軸の加速度
-      var x_g = accelerationIncludingGravity.x;
-      var y_g = accelerationIncludingGravity.y;
-      var z_g = accelerationIncludingGravity.z;
-      socket.emit('z_g', z_g);
-    });
+    socket.on('z_g', function(data){
+        console.log(data);
+      });
+    onload = function() {
+      // 描画コンテキストの取得
+      canvas = document.getElementById('jabkencanvas');
+      if ( ! canvas || ! canvas.getContext ) { return false; }
+      ctx = canvas.getContext('2d');
+
+      // フォント設定
+      ctx.font = "12pt  Helvetica";
+
+      window.addEventListener("devicemotion", function(event){
+        ctx.clearRect(0, 0, 300, 400);
+        var x_a = event.acceleration.x;
+        var y_a = event.acceleration.y;
+        var z_a = event.acceleration.z;
+        var x_g = event.accelerationIncludingGravity.x;
+        var y_g = event.accelerationIncludingGravity.y;
+        var z_g = event.accelerationIncludingGravity.z;
+        ctx.fillText("X : "+x_a, 20, 20);
+        ctx.fillText("Y : "+y_a, 20, 40);
+        ctx.fillText("Z : "+z_a, 20, 60);
+        ctx.fillText("X傾き : "+x_g, 20, 80);
+        ctx.fillText("Y傾き : "+y_g, 20, 100);
+        ctx.fillText("Z傾き : "+z_g, 20, 120);
+        socket.emit('z_g', z_g);
+      }, true);
+    };
+    setTimeout("scrollTo(0,1)", 50);
+    
+    
   
   
     $scope.address = location.href.split('/tunes/', 2)[1];
@@ -457,7 +479,7 @@
 
 </head>
 <body ng-controller="KeyboardCtrl" >
-  <h1>♪ {{address}}</h1>
+  <h1>♪ {{address}}</h1>{{z_g}}
   <div ng-show="user">ようこそ {{user}}<a href="/signout/{{address}}">ログアウト</a></div>
   <div ng-show="!user"><a href="/signin/twitter/{{address}}">Twitter認証でログイン</a></div>
   <div id="comment">
@@ -526,5 +548,6 @@
 </footer>
 
 </div>
+<canvas id="jabkencanvas"><canvas>
 </body>
 </html>
