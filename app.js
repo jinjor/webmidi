@@ -27,13 +27,6 @@ app.configure(function(){
 var _oauth = require('oauth');
 
 
-var io = require('socket.io').listen(conf.port);
-io.sockets.on('connection', function (socket) {
-  socket.emit('news', { hello: 'world' });
-  socket.on('my other event', function (data) {
-    console.log(data);
-  });
-});
 
 
 var dbType = 'mongo';
@@ -192,4 +185,11 @@ app.get('/contents/:address', function(req, res){
 var server = http.createServer(app);
 server.listen(conf.port, function(){
   console.log("Express server listening on port " + conf.port);
+});
+
+io.listen(server).sockets.on('connection', function (socket) {
+  //socket.emit('news', { hello: 'world' });
+  socket.on('z_g', function (data) {
+    console.log(data);
+  });
 });

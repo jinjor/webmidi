@@ -150,17 +150,22 @@
         $scope.connection = 'disconnected';
         $scope.echoms = '';
       });
-      socket.on('midi', function(abc){
-        var splitted = abc.split(',');
-        var a = parseInt(splitted[0]);
-        var b = parseInt(splitted[1]);
-        var c = parseInt(splitted[2]);
-        midiProcCommon(a,b,c);
+      socket.on('z_g', function(data){
+        console.log(data);
       });
       socket.on('echo', function(message){
         $scope.echoms = '(echo:' + (new Date().getMilliseconds() - parseInt(message)) + 'ms)';
       });
       socket.emit('echo', new Date().getMilliseconds());
+    });
+    window.addEventListener('devicemotion', function(event) {
+      var x = event.acceleration.x; // X軸の加速度
+      var y = event.acceleration.y; // Y軸の加速度
+      var z = event.acceleration.z; // Z軸の加速度
+      var x_g = accelerationIncludingGravity.x;
+      var y_g = accelerationIncludingGravity.y;
+      var z_g = accelerationIncludingGravity.z;
+      socket.emit('z_g', z_g);
     });
   
   
