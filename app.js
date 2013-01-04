@@ -17,7 +17,7 @@ var logger = log4js.getLogger('dateFile');
 
 var debugMode = process.env.NODE_APP_MODE === 'debug';
 var host = process.env.NODE_APP_HOST;
-var port = process.env.NODE_APP_PORT;
+var port = process.env.PORT;
 console.log('host: ' + host);
 
 var app = express();
