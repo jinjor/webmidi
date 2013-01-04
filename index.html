@@ -142,6 +142,7 @@
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
 
+    /*
     onload = function() {
       window.addEventListener("devicemotion", function(event){
         //var y_a = event.acceleration.y;
@@ -150,7 +151,7 @@
       }, true);
     };
     setTimeout("scrollTo(0,1)", 50);
-    
+    */
     
     
   
@@ -431,6 +432,7 @@
       }
     });
     
+    /*
     // 描画コンテキストの取得
       canvas = document.getElementById('jabkencanvas');
       if ( ! canvas || ! canvas.getContext ) { return false; }
@@ -465,13 +467,11 @@
       });
       socket.emit('echo', new Date().getMilliseconds());
     });
-    
+    */
     $(document).ready(function(){
       _($scope.synths).each(function(synth){
         synth.load(document[synth.id]);
       });
-      
-      
     });
     
     
@@ -480,7 +480,7 @@
 
 </head>
 <body ng-controller="KeyboardCtrl" >
-  <h1>♪ {{address}}</h1>{{y_g}}
+  <h1>♪ {{address}}</h1>
   <div ng-show="user">ようこそ {{user}}<a href="/signout/{{address}}">ログアウト</a></div>
   <div ng-show="!user"><a href="/signin/twitter/{{address}}">Twitter認証でログイン</a></div>
   <div id="comment">
@@ -549,6 +549,8 @@
 </footer>
 
 </div>
+<!--
 <canvas id="jabkencanvas"><canvas>
+                            -->
 </body>
 </html>
