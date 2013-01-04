@@ -4,8 +4,6 @@ var http    = require('http')
     ,path    = require('path')
     ,io	     = require('socket.io')
     ,express = require('express')
-    ,conf    = require('./conf.js')
-    ,secret  = require('./secret.js')
     ,log4js  = require('log4js');
     
 log4js.configure({
@@ -17,13 +15,14 @@ log4js.configure({
 });
 var logger = log4js.getLogger('dateFile');
 
-var debugMode = process.env.APP_MODE === 'debug';
-var host = debugMode ? 'localhost' : conf.host;
+var debugMode = process.env.NODE_APP_MODE === 'debug';
+var host = process.env.NODE_APP_HOST;
+var port = process.env.NODE_APP_PORT;
 console.log('host: ' + host);
 
 var app = express();
 app.configure(function(){
-  app.set('port', conf.port);
+  app.set('port', port);
   app.use(express.favicon());
   app.use(express.logger('dev'));
   app.use(express.bodyParser());
@@ -39,21 +38,12 @@ var _oauth = require('oauth');
 
 
 
-var dbType = 'mongo';
+var dbType = process.env.NODE_APP_DB_TYPE;
 var DbManager = (dbType == 'mongo') ? function(){
   var mongoose = require('mongoose');
   var Schema = mongoose.Schema
     , ObjectId = Schema.ObjectId;
-  if(debugMode){
-    //local
-    mongoose.connect('mongodb://localhost/web-midi');
-  }else if(process.env.MONGOHQ_URL){
-    //heroku
-    mongoose.connect(process.env.MONGOHQ_URL);
-  }else{
-    //nodejitsu
-    mongoose.connect(secret.mongo.uri);
-  }
+  mongoose.connect(process.env.MONGOHQ_URL);
   
   mongoose.model('tunes', new Schema({
       address: { type: String, index: {unique: true, dropDups: true} },
@@ -126,7 +116,7 @@ app.get('/signin/twitter/:address', function(req, res) {
       secret.twitter.consumerKey, // consumer key
       secret.twitter.consumerSecret, // consumer secret
       '1.0',
-      'http://' + host + ':' + (debugMode ? conf.port : 80) + '/signin/twitter/' + address, // callback URL
+      'http://' + host + ':' + process.env.NODE_TWITTER_CALLBACK_PORT + '/signin/twitter/' + address, // callback URL
       'HMAC-SHA1'
     );
     var oauth_token    = req.query.oauth_token;
@@ -193,8 +183,8 @@ app.get('/contents/:address', function(req, res){
 
 
 var server = http.createServer(app);
-server.listen(conf.port, function(){
-  console.log("Express server listening on port " + conf.port);
+server.listen(port, function(){
+  console.log("Express server listening on port " + port);
 });
 
 io.listen(server).sockets.on('connection', function (socket) {

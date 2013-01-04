@@ -1,7 +1,7 @@
 /data/*
 /log/*
 /node_modules
-secret.js
+setup-debug.bat
 
 #################
 ## Eclipse
