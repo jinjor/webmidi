@@ -113,8 +113,8 @@ app.get('/signin/twitter/:address', function(req, res) {
     var oauth = new (_oauth.OAuth)(
       'https://api.twitter.com/oauth/request_token',
       'https://api.twitter.com/oauth/access_token',
-      secret.twitter.consumerKey, // consumer key
-      secret.twitter.consumerSecret, // consumer secret
+      process.env.NODE_TWITTER_CONSUMER_KEY, // consumer key
+      process.env.NODE_TWITTER_CONSUMER_SECRET, // consumer secret
       '1.0',
       'http://' + host + ':' + process.env.NODE_TWITTER_CALLBACK_PORT + '/signin/twitter/' + address, // callback URL
       'HMAC-SHA1'
