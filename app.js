@@ -43,7 +43,7 @@ var DbManager = (dbType == 'mongo') ? function(){
   var mongoose = require('mongoose');
   var Schema = mongoose.Schema
     , ObjectId = Schema.ObjectId;
-  mongoose.connect(process.env.MONGOHQ_URL);
+  mongoose.connect(process.env.NODE_APP_DB_URL);
   
   mongoose.model('tunes', new Schema({
       address: { type: String, index: {unique: true, dropDups: true} },
@@ -78,8 +78,8 @@ var DbManager = (dbType == 'mongo') ? function(){
   }
 } : function(){
   var redis = (function(){
-    if (process.env.REDISTOGO_URL) {
-      var rtg   = require("url").parse(process.env.REDISTOGO_URL);
+    if (process.env.NODE_APP_DB_URL) {
+      var rtg   = require("url").parse(process.env.NODE_APP_DB_URL);
       var redis = require("redis").createClient(rtg.port, rtg.hostname);
       redis.auth(rtg.auth.split(":")[1]); 
       return redis;
