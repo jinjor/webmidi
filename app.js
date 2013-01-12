@@ -16,8 +16,8 @@ log4js.configure({
 var logger = log4js.getLogger('dateFile');
 
 var debugMode = process.env.NODE_APP_MODE === 'debug';
-var host = process.env.NODE_APP_HOST;
-var port = process.env.PORT;
+var host = process.env.HOST || process.env.NODE_APP_HOST;
+var port = process.env.PORT || process.env.NODE_APP_PORT;
 console.log('host: ' + host);
 
 var app = express();
@@ -114,7 +114,7 @@ app.get('/signin/twitter/:address', function(req, res) {
       'https://api.twitter.com/oauth/request_token',
       'https://api.twitter.com/oauth/access_token',
       process.env.NODE_TWITTER_CONSUMER_KEY, // consumer key
-      process.env.NODE_TWITTER_CONSUMER_SECRET, // consumer secret
+      process.env.NODE_TWITTER_CONSUMER_KEY, // consumer secret
       '1.0',
       'http://' + host + ':' + process.env.NODE_TWITTER_CALLBACK_PORT + '/signin/twitter/' + address, // callback URL
       'HMAC-SHA1'
