@@ -6,6 +6,7 @@ var http    = require('http')
     ,express = require('express')
     ,log4js  = require('log4js');
     
+/*
 log4js.configure({
 	appenders: [{
 	"type": "dateFile",
@@ -13,7 +14,8 @@ log4js.configure({
 	"pattern": "-yyyy-MM-dd"
 	}]
 });
-//var logger = log4js.getLogger('dateFile');
+var logger = log4js.getLogger('dateFile');
+*/
 
 var debugMode = process.env.NODE_APP_MODE === 'debug';
 console.log(process.env.HOST);
