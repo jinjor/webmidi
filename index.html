@@ -8,6 +8,7 @@
   <script type="text/javascript" src="/js/underscore-min.js"></script>
   <script type="text/javascript" src="/js/jazz-plugin-handler.js"></script>
   <script type="text/javascript" src="/js/footerFixed.js"></script>
+  <script type="text/javascript" src="/js/smf.js"></script>
   
   <link rel="stylesheet" type="text/css" href="/css/base.css"/>
   <script type="text/javascript">
@@ -472,6 +473,28 @@
       _($scope.synths).each(function(synth){
         synth.load(document[synth.id]);
       });
+      
+      var SmfFile = org.jinjor.smf.SmfFile;
+
+      var smf = null;
+
+      $.event.props.push('dataTransfer');//おまじない
+      if (window.File) {
+          $("#drop").on("dragover", function(event){
+            event.preventDefault();
+          }).on("drop", function(event){
+            try{
+              var files = event.dataTransfer.files;
+              var f = files[0];
+              new SmfFile(f);
+            }catch(e){
+              console.log(e);
+            }
+            event.preventDefault();
+          });
+      } else {
+          window.alert("本ブラウザではFile APIが使えません");
+      }
     });
     
     
@@ -542,10 +565,12 @@
 <a href="https://twitter.com/share" class="twitter-share-button" data-text="{{address}} #WebMidiLink" data-url="http://jinjor.webmidi.jit.su/tunes/{{address}}" data-lang="ja">ツイート</a>
 <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
 </div>
+
+<div id="drop" style="width:700px; height:150px; padding:10px; border:1px solid"></div>
 <footer id="footer">
   <hr/>
 
-  Copyright (C) 2012 Yosuke Torii All Rights Reserved.
+  Copyright (C) 2012-2013 Yosuke Torii All Rights Reserved.
 </footer>
 
 </div>

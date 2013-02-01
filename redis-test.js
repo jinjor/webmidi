@@ -16,3 +16,7 @@ redis.set('hoga', 'MOGO', function(e){
     }
   });
 });
+redis.keys('*', function(e, data){
+  e && console.log(e);
+  console.log(data);
+});
