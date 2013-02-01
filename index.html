@@ -476,20 +476,24 @@
       
       var SmfFile = org.jinjor.smf.SmfFile;
 
-      var smf = null;
-
       $.event.props.push('dataTransfer');//おまじない
       if (window.File) {
           $("#drop").on("dragover", function(event){
             event.preventDefault();
           }).on("drop", function(event){
-            try{
-              var files = event.dataTransfer.files;
-              var f = files[0];
-              new SmfFile(f);
-            }catch(e){
-              console.log(e);
-            }
+            var files = event.dataTransfer.files;
+            var f = files[0];
+            var smfFile = new SmfFile(f, function(){
+              $scope.tracks = _(smfFile.smfData.tracks).map(function(_track){
+                var track = new Track({
+                  name: '_',
+                  synth: $scope.synths.GMPlayer,
+                  channel: 1
+                }, rerenderTrack);
+                return track;
+              });
+              $scope.$apply();
+            });
             event.preventDefault();
           });
       } else {

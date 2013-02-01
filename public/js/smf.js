@@ -5,14 +5,16 @@
     this.events = events;
   };
   
-  var SmfFile = function(file){
+  var SmfFile = function(file, onReady){
     this.name = file.name;
     this.type = file.type;
     this.size = file.size;
     var reader = new FileReader();//TODO Html5?
+    var that = this;
     reader.onload = function(event) {
       var data = event.target.result;
-      this.smfData = new SmfData(data);
+      that.smfData = new SmfData(data);
+      onReady();
     };
     //reader.onerror = function(error) {
     //    console.log(error);
