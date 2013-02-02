@@ -100,27 +100,23 @@
               event.push(e);
             }
           }
-        }else if(0x80 <= eventFirst && eventFirst < 0xf0){//MidiEvent
-          if(eventFirst >= 0xc0){
-            event.push(buf[p++]);
-          }else{
-            event.push(buf[p++]);
-            event.push(buf[p++]);
-          }
-        }else{//ランニングステータス（MIDIイベントのみ）
-          var firstData = event.pop();
-          eventFirst = prevEventFirst;
-          event.push(eventFirst);
-
-          if(0x80 <= eventFirst && eventFirst < 0xf0){//MidiEvent
-            if(eventFirst >= 0xc0){
-              event.push(firstData);
-            }else{
-              event.push(firstData);
-              event.push(buf[p++]);
+        }else if(eventFirst < 0xf0){//MidiEventまたはランニングステータス（MidiEventのみ）
+          var firstData;
+          if(eventFirst < 0x80){//running status
+            var firstData = event.pop();
+            if(prevEventFirst < 0x80 || 0xf0 <= prevEventFirst){
+              throw '予期しないランニングステータス: ' + prevEventFirst;//一応
             }
+            eventFirst = prevEventFirst;
+            event.push(eventFirst);
           }else{
-            throw '予期しないランニングステータスです'
+            var firstData = buf[p++];
+          }
+          if(eventFirst >= 0xc0){
+            event.push(firstData);
+          }else{
+            event.push(firstData);
+            event.push(buf[p++]);
           }
         }
         console.log(event);
@@ -132,7 +128,7 @@
     }
     this.tracks = tracks;
     console.log(tracks);
-  };
+  }
   
   if(!ns.org){org = {};}
   if(!org.jinjor){org.jinjor = {};}
