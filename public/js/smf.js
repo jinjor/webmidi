@@ -1,5 +1,10 @@
 (function(ns){
   
+  var Track = function(events){
+    console.log("イベント長: " + events.length);
+    this.events = events;
+  };
+  
   var SmfFile = function(file, onReady){
     this.name = file.name;
     this.type = file.type;
@@ -114,10 +119,12 @@
             event.push(buf[p++]);
           }
         }
+        console.log(event);
         events.push(event);
         prevEventFirst = eventFirst;
       }
-      tracks.push(events);
+
+      tracks.push(new Track(events));
     }
     this.tracks = tracks;
     console.log(tracks);
@@ -126,6 +133,7 @@
   if(!ns.org){org = {};}
   if(!org.jinjor){org.jinjor = {};}
   if(!org.jinjor.smf){org.jinjor.smf = {};}
+  org.jinjor.smf.Track = Track;
   org.jinjor.smf.SmfFile = SmfFile;
   org.jinjor.smf.SmfData = SmfData;
   
