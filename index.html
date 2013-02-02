@@ -182,20 +182,6 @@
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
 
-    /*
-    onload = function() {
-      window.addEventListener("devicemotion", function(event){
-        //var y_a = event.acceleration.y;
-        var y_g = event.accelerationIncludingGravity.y;
-        socket.emit('y_g', y_g);
-      }, true);
-    };
-    setTimeout("scrollTo(0,1)", 50);
-    */
-    
-    
-  
-  
     $scope.address = location.href.split('/tunes/', 2)[1];
     document.title = $scope.address + " - WebMidiLink Sample";
     $scope.showFrame = false;
@@ -366,14 +352,6 @@
       25:{number:25, description:''},
       26:{number:26, description:''}
     });
-    //$scope.synths.push(new Synth('WebModular', 'http://www.g200kg.com/en/docs/webmodular/webmodular.html'));
-    //$scope.synths.push(new Synth('WebBridge', 'http://www.g200kg.com/en/docs/webbridge/'));
-    //$scope.synths.push(new Synth('WebSynth', 'http://aikelab.net/websynth/'));
-    //$scope.synths.push(new Synth('BitMaker', 'http://aikelab.net/bitmaker/'));
-    //$scope.synths.push(new Synth('Timbre.js', 'http://script-synthesizer.herokuapp.com/'));
-    //$scope.synths.push(new Synth('Beatonica', 'http://beatonica.com/'));
-    //$scope.synths.push(new Synth('Webitaur', 'http://www.angryoctopus.co.nz/synth16/'));
-    //$scope.synths.push(new Synth('Pianoroll', '/pianoroll.html'));
     $scope.synthsAsArray = function(){
       return _.values($scope.synths);
     };
@@ -471,42 +449,6 @@
       }
     });
     
-    /*
-    // 描画コンテキストの取得
-      canvas = document.getElementById('jabkencanvas');
-      if ( ! canvas || ! canvas.getContext ) { return false; }
-      ctx = canvas.getContext('2d');
-      ctx.font = "12pt  Helvetica";
-      ctx.fillStyle = "#4444ff";
-      ctx.beginPath();
-      
-    var socket = io.connect('/', { rememberTransport: false });
-    //var socket = io.connect(null, { transports: ["xhr-polling"], rememberTransport: false });
-    socket.on('connect', function() {
-      alert('connected');
-      $scope.connection = 'connected';
-      console.log('connected');
-      socket.on('disconnect', function() {
-        $scope.connection = 'disconnected';
-        $scope.echoms = '';
-      });
-      socket.on('y_g', function(y_g){
-        //ctx.clearRect(0, 0, 300, 400);
-        var y = (70 + y_g * 10);
-        console.log(y);
-        ctx.fillRect(50, y, 4, 4);
-        
-        $scope.sequencer.send(0, 0x90, 127-y, 100);
-        setTimeout(function(){
-          $scope.sequencer.send(0, 0x80, 127-y, 0);
-        }, 20);
-      });
-      socket.on('echo', function(message){
-        $scope.echoms = '(echo:' + (new Date().getMilliseconds() - parseInt(message)) + 'ms)';
-      });
-      socket.emit('echo', new Date().getMilliseconds());
-    });
-    */
     $(document).ready(function(){
       _($scope.synths).each(function(synth){
         synth.load(document[synth.id]);
