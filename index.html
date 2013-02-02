@@ -158,16 +158,13 @@
       console.log("timeMode=" + this.timeMode)
       var that = this;
       this.tracks = _(smfData.tracks).map(function(event){
-        var time = 0;
+        var deltaSum = 0;
         var tempo = 120;
         var timePerDelta = 1000*60/(that.timeMode * tempo);
         console.log("messages start");
         var messages = _(event).map(function(e){
-          console.log(e[0]);
-          //if(e[0] < 1000){
-            time += Math.floor(timePerDelta * e[0]);
-          //}
-          return {time: time, message: [e[1], e[2], e[3]]}
+          deltaSum += e[0];
+          return {time: Math.floor(timePerDelta * deltaSum), message: [e[1], e[2], e[3]]}
         });
         return new Track({
           name: '_',
