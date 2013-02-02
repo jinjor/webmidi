@@ -39,10 +39,11 @@
       this.sendMessage("midi,b0,78,0");
     };
     Synth.prototype.sendMidiMessage = function(m0, m1, m2) {
-      this.sendMessage('midi,' + m0.toString(16) +','+ m1.toString(16)+','+ m2.toString(16));
+      this.sendMessage('midi,' + m0.toString(16) +','+ m1.toString(16)+','+ (m2 ? m2.toString(16) : "0"));
     };
     Synth.prototype.sendMessage = function(s) {
       if(this.sy){
+        //console.log(s);
         this.sy.postMessage(s, "*");
       }  
     };
@@ -90,6 +91,10 @@
   function createTrackId(){
     return ++trackId;
   };
+  
+
+  
+  
   var Track = function(arg, rerender){
     console.log(arg)
     this.id = createTrackId();
@@ -101,7 +106,6 @@
     this.messages = arg.messages || [
       {time: 1000 * 60 * 10, message: [0x80, 62, 0]}
     ];
-    this.notes = arg.notes || [];
     var that = this;
     this.rerender = function(){
       rerender(that);
@@ -134,11 +138,49 @@
     this.messages = [
       {time: 1000 * 60 * 10, message: [0x80, 62, 0]}
     ];
-    this.notes = [];
     this.rerender();
   };
   Track.prototype.onChangeSynth = function(){
     this.program = this.synth.programs[1];
+  };
+  
+  
+  var Tune = function(smfData, synth, rerenderTrack){//容量と互換性の都合でSMF形式に準拠する
+    if(smfData){
+      if(smfData.format != 1){
+        throw 'まだ1しか受け付けません'
+      }
+      if(smfData.timeMode > 128*256){
+        throw 'まだMSB=0しか受け付けません'
+      }
+      this.format = smfData.format;
+      this.timeMode = smfData.timeMode;
+      console.log("timeMode=" + this.timeMode)
+      var that = this;
+      this.tracks = _(smfData.tracks).map(function(event){
+        var time = 0;
+        var tempo = 120;
+        var timePerDelta = 1000*60/(that.timeMode * tempo);
+        console.log("messages start");
+        var messages = _(event).map(function(e){
+          console.log(e[0]);
+          //if(e[0] < 1000){
+            time += Math.floor(timePerDelta * e[0]);
+          //}
+          return {time: time, message: [e[1], e[2], e[3]]}
+        });
+        return new Track({
+          name: '_',
+          synth: synth,
+          channel: 1,
+          messages: messages
+        }, rerenderTrack);
+      });
+    }else{
+      this.format = 1;
+      this.timeMode = 480;
+      this.tracks = [];
+    }
   };
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
@@ -343,7 +385,6 @@
     $scope.selectedTrackId = -1;
     $scope.tracks = [];
     
-    
     $scope.saveContents = function(){
       _($scope.tracks).each(function(track){
         track.synth.sy = null;
@@ -484,15 +525,17 @@
             var files = event.dataTransfer.files;
             var f = files[0];
             var smfFile = new SmfFile(f, function(){
-              $scope.tracks = _(smfFile.smfData.tracks).map(function(_track){
-                var track = new Track({
-                  name: '_',
-                  synth: $scope.synths.GMPlayer,
-                  channel: 1
-                }, rerenderTrack);
-                return track;
+              var tune = new Tune(smfFile.smfData, $scope.synths.GMPlayer, rerenderTrack);
+              $scope.tracks.length = 0;
+              _(tune.tracks).each(function(t){
+                $scope.tracks.push(t);
               });
               $scope.$apply();
+              setTimeout(function(){
+                _($scope.tracks).each(function(track){
+                  track.rerender();
+                });
+              },20);
             });
             event.preventDefault();
           });
