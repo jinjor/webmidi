@@ -23,7 +23,7 @@
     var k = 1;
     for(; k <= 4; k++){
       var d = buf[p++];
-      length = length*128 + d;
+      length = length*128 + d%128;
       if(d <= 127){
         break;
       }else if(k == 4){
