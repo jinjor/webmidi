@@ -143,12 +143,12 @@
   };
   
   
-  var Tune = function(rerenderTrack, trackIsSelected){//容量と互換性の都合でSMF形式に準拠する
+  var Tune = function(rerenderTrack){//容量と互換性の都合でSMF形式に準拠する
     this.format = 1;
     this.timeMode = 480;
     this.tracks = [];
     this.rerenderTrack = rerenderTrack;
-    this.trackIsSelected = trackIsSelected;
+    this.selectedTrackId = -1;
   };
   Tune.prototype.refresh = function(smfData, synth){
     if(smfData.format != 1){
@@ -194,9 +194,13 @@
     });
   };
   Tune.prototype.foreachSelectedTrack = function(f){
+    var that = this;
     this.foreachTrack(function(track){
-      this.trackIsSelected(track) && f(track);
+      that.trackIsSelected(track) && f(track);
     })
+  };
+  Tune.prototype.trackIsSelected = function(track){
+    return track.id == this.selectedTrackId;
   };
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
@@ -227,7 +231,7 @@
           var ctx = canvas.getContext('2d');
           ctx.fillStyle = "#4444ff";
           ctx.beginPath();
-          var x = that.recState.getLocation() * 0.01;
+          var x = that.recState.getLocation() * 0.003;
           var y = (127 - m1);
           ctx.fillRect(x, y, 2, 2);
         });
@@ -340,10 +344,7 @@
     };
     
     $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
-    $scope.selectedTrackId = -1;
-    $scope.tune = new Tune(rerenderTrack, function(track){
-      $scope.trackIsSelected(track);
-    });
+    $scope.tune = new Tune(rerenderTrack);
     
     $scope.saveContents = function(){
       _($scope.tune.tracks).each(function(track){
@@ -385,15 +386,15 @@
       alert(e);
     });
     $scope.selectTrack = function(track){
-      $scope.selectedTrackId = track.id;
+      $scope.tune.selectedTrackId = track.id;
     };
     $scope.trackIsSelected = function(track){
-      return (track.id == $scope.selectedTrackId) ? 'selected' : null;
+      return $scope.tune.trackIsSelected(track) ? 'selected' : null;
     };
       
     $scope.messages = [];
     $scope.keyIsPressed = function(track){
-      return ($scope.trackIsSelected(track) && $scope.sequencer.recState && $scope.sequencer.recState.keyIsPressed()) ? 'pressed' : '';
+      return ($scope.tune.trackIsSelected(track) && $scope.sequencer.recState && $scope.sequencer.recState.keyIsPressed()) ? 'pressed' : '';
     };
     $scope.playing = false;
     $scope.rec = function(){
