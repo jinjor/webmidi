@@ -113,11 +113,11 @@
     this.programChange(this.program.number);
   };
   Track.prototype.recNote = function(note, velocity, startTime, endTime){
-    this.messages.push({time: startTime, message: [0x90, note, velocity]});
-    this.messages.push({time: endTime, message: [0x80, note, 0]});
+    this.messages.push([startTime, 0x90, note, velocity]);
+    this.messages.push([endTime, 0x80, note, 0]);
   };
   Track.prototype.recElse = function(time, m0, m1, m2){
-    this.messages.push({time: time, message: [m0, m1, m2]});
+    this.messages.push([time, m0, m1, m2]);
   };
   Track.prototype.noteOn = function(note, velo) {
     this.putMidi(0x90, note, velo);
@@ -248,12 +248,12 @@
       if(optMode == 'recoding'){
         this.recState.onNoteFinished = function(note, velocity, startTime, endTime){
           that.foreachTrack(function(track){
-            $scope.trackIsSelected(track) && track.recNote(note, velocity, startTime, endTime);
+            $scope.trackIsSelected(track) && track.recNote(note, velocity, that.msToTick(startTime), that.msToTick(endTime));
           });
         };
-        this.recState.onElse = function(m0, m1, m2){
+        this.recState.onElse = function(time, m0, m1, m2){
           that.foreachTrack(function(track){
-            $scope.trackIsSelected(track) && track.recElse(m0, m1, m2);
+            $scope.trackIsSelected(track) && track.recElse(that.msToTick(time),m0, m1, m2);
           });
         };
       }
@@ -312,8 +312,6 @@
     Sequencer.prototype.msToTick = function(ms){
       return Math.floor(ms / this.getTimePerTick());
     };
-    
-      
       
     var rerenderTrack = function(track){
       var canvas = document.getElementById('' + track.id);
@@ -322,7 +320,7 @@
       ctx.fillStyle = "#4444ff";
       ctx.beginPath();
       _(track.messages).each(function(message){
-        var x1 = message[0] * 0.01;
+        var x1 = message[0] * 0.003;
         var y1 = (127 - message[2]);
         ctx.fillRect(x1, y1, 2, 2);
       });
