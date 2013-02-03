@@ -93,10 +93,11 @@
     return ++trackId;
   };
   
-
-  
-  
   var Track = function(arg, rerender){
+    if(!rerender){
+      throw '!?';
+    }
+    
     console.log(arg)
     this.id = createTrackId();
     this.name = arg.name;
@@ -146,39 +147,52 @@
   };
   
   
-  var Tune = function(smfData, synth, rerenderTrack){//容量と互換性の都合でSMF形式に準拠する
-    if(smfData){
-      if(smfData.format != 1){
-        throw 'まだ1しか受け付けません'
-      }
-      if(smfData.timeMode > 128*256){
-        throw 'まだMSB=0しか受け付けません'
-      }
-      this.format = smfData.format;
-      this.timeMode = smfData.timeMode;
-      console.log("timeMode=" + this.timeMode)
-      var that = this;
-      this.tracks = _(smfData.tracks).map(function(event){
-        var deltaSum = 0;
-        var tempo = 120;
-        var timePerDelta = 1000*60/(that.timeMode * tempo);
-        console.log("messages start");
-        var messages = _(event).map(function(e){
-          deltaSum += e[0];
-          return {time: Math.floor(timePerDelta * deltaSum), message: [e[1], e[2], e[3]]}
-        });
-        return new Track({
-          name: '_',
-          synth: synth,
-          channel: 1,
-          messages: messages
-        }, rerenderTrack);
-      });
-    }else{
-      this.format = 1;
-      this.timeMode = 480;
-      this.tracks = [];
+  var Tune = function(rerenderTrack){//容量と互換性の都合でSMF形式に準拠する
+    this.format = 1;
+    this.timeMode = 480;
+    this.tracks = [];
+    this.rerenderTrack = rerenderTrack;
+  };
+  Tune.prototype.refresh = function(smfData, synth){
+    if(smfData.format != 1){
+      throw 'まだ1しか受け付けません'
     }
+    if(smfData.timeMode > 128*256){
+      throw 'まだMSB=0しか受け付けません'
+    }
+    this.format = smfData.format;
+    this.timeMode = smfData.timeMode;
+    console.log("timeMode=" + this.timeMode)
+    var that = this;
+    this.tracks = _(smfData.tracks).map(function(event){
+      var deltaSum = 0;
+      var tempo = 120;
+      var timePerDelta = 1000*60/(that.timeMode * tempo);
+      console.log("messages start");
+      var messages = _(event).map(function(e){
+        deltaSum += e[0];
+        return {time: Math.floor(timePerDelta * deltaSum), message: [e[1], e[2], e[3]]}
+      });
+      return new Track({
+        name: '_',
+        synth: synth,
+        channel: 1,
+        messages: messages
+      }, that.rerenderTrack);
+    });
+  };
+  Tune.prototype.rerender = function(){
+    _(this.tracks).each(function(track){
+      track.rerender();
+    });
+  };
+  Tune.prototype.addTrack = function(synth, channel){
+    var track = new Track({
+        name: '_',
+        synth: synth,
+        channel: channel
+    }, this.rerenderTrack);
+    this.tracks.push(track);//とりあえず1trackに
   };
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
@@ -193,14 +207,14 @@
       $scope.user = user;
     });
     
-    var Sequencer = function(tracks){
+    var Sequencer = function(tune){
       this.location = 0;
-      this.tracks = tracks;
+      this.tune = tune;
       this.playing = false;
       this.recState = new RecState();
     };
     Sequencer.prototype.foreachTrack = function(f){
-      _(this.tracks).each(function(track){
+      _(this.tune.tracks).each(function(track){
         f(track);
       });
     };
@@ -233,7 +247,7 @@
       });
     };
     Sequencer.prototype.play = function(optMode){
-      if(this.tracks.length <= 0){
+      if(this.tune.tracks.length <= 0){
         return;
       }
       var that = this;
@@ -250,7 +264,7 @@
           });
         };
       }
-      var messageTrackPairs = _(this.tracks).reduce(function(memo, track){
+      var messageTrackPairs = _(this.tune.tracks).reduce(function(memo, track){
         var pairs = _(track.messages).map(function(mes){ return [mes, track] });
         return memo.concat(pairs);
       }, []);
@@ -296,32 +310,6 @@
       this.stopPlaying();
     };
     
-    $scope.synths = {};
-    _(org.jinjor.synth.synthDefs).each(function(synthDef){
-      $scope.synths[synthDef.name] = new Synth(synthDef.name, synthDef.url, synthDef.author, synthDef.programs);
-    });
-    $scope.synthsAsArray = function(){
-      return _.values($scope.synths);
-    };
-    
-    $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
-    $scope.selectedTrackId = -1;
-    $scope.tracks = [];
-    
-    $scope.saveContents = function(){
-      _($scope.tracks).each(function(track){
-        track.synth.sy = null;
-      });
-      
-      $http({method: 'POST', url: '/saveContents', data: {
-        address: $scope.address,
-        contents: JSON.stringify($scope.tracks)
-      }}).success(function() {
-        alert('saveしました')
-      }).error(function(e) {
-        alert(e);
-      });
-    };
     var rerenderTrack = function(track){
       var canvas = document.getElementById('' + track.id);
       var ctx = canvas.getContext('2d');
@@ -335,36 +323,54 @@
       });
     };
     
+    $scope.synths = {};
+    _(org.jinjor.synth.synthDefs).each(function(synthDef){
+      $scope.synths[synthDef.name] = new Synth(synthDef.name, synthDef.url, synthDef.author, synthDef.programs);
+    });
+    $scope.synthsAsArray = function(){
+      return _.values($scope.synths);
+    };
+    
+    $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+    $scope.selectedTrackId = -1;
+    $scope.tune = new Tune(rerenderTrack);
+    
+    $scope.saveContents = function(){
+      _($scope.tune.tracks).each(function(track){
+        track.synth.sy = null;
+      });
+      
+      $http({method: 'POST', url: '/saveContents', data: {
+        address: $scope.address,
+        contents: JSON.stringify($scope.tune.tracks)
+      }}).success(function() {
+        alert('saveしました')
+      }).error(function(e) {
+        alert(e);
+      });
+    };
+    
+    
     $http({method: 'GET', url: '/contents/' + $scope.address}).success(function(tracks) {
       console.log(tracks);
-      $scope.tracks = tracks ? _(tracks).map(function(_track){
+      $scope.tune.tracks = tracks ? _(tracks).map(function(_track){
         _track.synth = $scope.synths[_track.synth.name];
         return new Track(_track, rerenderTrack);
       }) : [];
       
       trackId = tracks.length + 1;
-      $scope.sequencer = new Sequencer($scope.tracks);
+      $scope.sequencer = new Sequencer($scope.tune);
       
       _($scope.synths).each(function(synth){
         synth.load(document[synth.id]);
       });
       setTimeout(function(){
-        _($scope.tracks).each(function(track){
-          track.rerender();
-        });
+        $scope.tune.rerender();
       },20);
       
     }).error(function(e) {
       alert(e);
     });
-    $scope.addTrack = function(synth, channel){
-      var track = new Track({
-        name: '_',
-        synth: synth,
-        channel: channel
-      }, rerenderTrack);
-      $scope.tracks.push(track);//とりあえず1trackに
-    };
     $scope.selectTrack = function(track){
       $scope.selectedTrackId = track.id;
     };
@@ -412,16 +418,10 @@
             var files = event.dataTransfer.files;
             var f = files[0];
             var smfFile = new SmfFile(f, function(){
-              var tune = new Tune(smfFile.smfData, $scope.synths.GMPlayer, rerenderTrack);
-              $scope.tracks.length = 0;
-              _(tune.tracks).each(function(t){
-                $scope.tracks.push(t);
-              });
+              $scope.tune.refresh(smfFile.smfData, $scope.synths.GMPlayer);
               $scope.$apply();
               setTimeout(function(){
-                _($scope.tracks).each(function(track){
-                  track.rerender();
-                });
+                $scope.tune.rerender();
               },20);
             });
             event.preventDefault();
@@ -463,7 +463,7 @@
       </select>
     </p>
   </div>
-  <button ng-repeat="synth in synths" ng-click="addTrack(synth, 1)">{{synth.name}}</button>
+  <button ng-repeat="synth in synths" ng-click="tune.addTrack(synth, 1)">{{synth.name}}</button>
   
   <div>
     <button ng-click="rec()" ng-disabled="sequencer.playing">●Rec</button>
@@ -472,7 +472,7 @@
   </div>
   <div class="tracks">
     <ul>
-      <li ng-repeat="track in tracks" class='track {{trackIsSelected(track)}}' ng-click="selectTrack(track)">
+      <li ng-repeat="track in tune.tracks" class='track {{trackIsSelected(track)}}' ng-click="selectTrack(track)">
         <div class="track_def">
           <!--<label>{{$index + 1}}</label>-->
           <span class="keyboard {{keyIsPressed(track)}}">■</span> <!--{{track.name}} : {{track.synth.name}}-->
