@@ -105,9 +105,7 @@
     this.channel = arg.channel || 1;
     this.program = arg.program ? this.synth.programs[arg.program.number] : this.synth.programs[1];
     this.selected = true;
-    this.messages = arg.messages || [
-      {time: 1000 * 60 * 10, message: [0x80, 62, 0]}
-    ];
+    this.messages = arg.messages || [1000*60*10/(1000*60/480*120), 0x80, 62, 0];
     var that = this;
     this.rerender = function(){
       rerender(that);
@@ -137,9 +135,7 @@
     this.synth.sendMidiMessage(m0 + this.channel - 1, m1, m2);//キーボードからはchannel1で来る前提
   };
   Track.prototype.deleteAll = function(){
-    this.messages = [
-      {time: 1000 * 60 * 10, message: [0x80, 62, 0]}
-    ];
+    this.messages = [1000*60*10/(1000*60/480*120), 0x80, 62, 0];
     this.rerender();
   };
   Track.prototype.onChangeSynth = function(){
@@ -164,14 +160,11 @@
     this.timeMode = smfData.timeMode;
     console.log("timeMode=" + this.timeMode)
     var that = this;
-    this.tracks = _(smfData.tracks).map(function(event){
+    this.tracks = _(smfData.tracks).map(function(events){
       var deltaSum = 0;
-      var tempo = 120;
-      var timePerDelta = 1000*60/(that.timeMode * tempo);
-      console.log("messages start");
-      var messages = _(event).map(function(e){
+      var messages = _(events).map(function(e){
         deltaSum += e[0];
-        return {time: Math.floor(timePerDelta * deltaSum), message: [e[1], e[2], e[3]]}
+        return [deltaSum, e[1], e[2], e[3]];
       });
       return new Track({
         name: '_',
@@ -271,7 +264,7 @@
       
       this.playing = optMode || 'playing';
       messageTrackPairs.sort(function(a, b){
-        return a[0].time - b[0].time;
+        return a[0][0] - b[0][0];
       });
       //console.log(messageTrackPairs);
       that.foreachTrack(function(track){
@@ -292,8 +285,8 @@
         }else if(!current){
           that.stop();
           $scope.$apply();
-        }else if(currentMessage.time < location){
-          currentTrack.putMidi(currentMessage.message[0], currentMessage.message[1], currentMessage.message[2]);
+        }else if(that.tickToMs(currentMessage[0]) < location){
+          currentTrack.putMidi(currentMessage[1], currentMessage[2], currentMessage[3]);
           index++;
           tick();
         }else{
@@ -309,7 +302,19 @@
       this.playing = null;
       this.stopPlaying();
     };
+    Sequencer.prototype.tickToMs = function(tick){
+      return Math.floor(this.getTimePerTick() * tick);
+    };
+    Sequencer.prototype.getTimePerTick = function(){
+      var tempo = 120;//TODO
+      return 1000*60/(this.tune.timeMode * tempo);
+    };
+    Sequencer.prototype.msToTick = function(ms){
+      return Math.floor(ms / this.getTimePerTick());
+    };
     
+      
+      
     var rerenderTrack = function(track){
       var canvas = document.getElementById('' + track.id);
       var ctx = canvas.getContext('2d');
@@ -317,8 +322,8 @@
       ctx.fillStyle = "#4444ff";
       ctx.beginPath();
       _(track.messages).each(function(message){
-        var x1 = message.time * 0.01;
-        var y1 = (127 - message.message[1]);
+        var x1 = message[0] * 0.01;
+        var y1 = (127 - message[2]);
         ctx.fillRect(x1, y1, 2, 2);
       });
     };
@@ -355,8 +360,13 @@
       console.log(tracks);
       $scope.tune.tracks = tracks ? _(tracks).map(function(_track){
         _track.synth = $scope.synths[_track.synth.name];
+        _track.messages = _(_track.messages).filter(function(e){//下位互換
+          return (e.message || e.time) ? false : true;
+        });
         return new Track(_track, rerenderTrack);
       }) : [];
+      
+      
       
       trackId = tracks.length + 1;
       $scope.sequencer = new Sequencer($scope.tune);
