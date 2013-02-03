@@ -177,7 +177,7 @@ app.get('/contents/:address', function(req, res){
       console.log(e);
       res.send(e, 500);
     }else{
-      console.log(contents);
+      //console.log(contents);
       res.send(contents);
     }
   });

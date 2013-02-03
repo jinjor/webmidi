@@ -33,9 +33,10 @@ li {
 
 .track{
   border: solid 1px #666666;
-  width:900px;
-  height:140px;
-  padding-right: 0px;
+  height:128px;
+  margin-right: 10px;
+  overflow: hidden;
+  max-width: 1340px;
 }
 .track.selected{
   border: solid 1px #666699;
@@ -46,7 +47,7 @@ li {
   background: -moz-linear-gradient(top, #cccccc, #888888);
   background: -webkit-gradient(linear, left top, left bottom, from(#cccccc), to(#888888));
   width:300px;
-  height:136px;
+  height:128px;
   float: left;
   border-right: solid 1px #666699;
 }
@@ -55,16 +56,17 @@ li {
   background: -webkit-gradient(linear, left top, left bottom, from(#ccccee), to(#8888cc));
 }
 .pianoroll_summary{
-  padding: 2px 2px 2px 2px;
+  padding: 0px 0px 0px 0px;
   background: -moz-linear-gradient(top, #eeeeee, #cccccc);
   background: -webkit-gradient(linear, left top, left bottom, from(#eeeeee), to(#cccccc));
-  float: left;
-  width:591px;
-  height:136px;
+  overflow: hidden;
+  height:128px;
 }
 .track.selected .pianoroll_summary{
   background: -moz-linear-gradient(top, #eeeeff, #ccccee);
   background: -webkit-gradient(linear, left top, left bottom, from(#eeeeff), to(#ccccee));
+}
+.pianoroll_summary canvas{
 }
 
 .keyboard{
