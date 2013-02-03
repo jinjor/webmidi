@@ -150,7 +150,9 @@
     this.selectedTrackId = -1;
     this.pxPerMsMode = 0;//1倍
   };
-  Tune.prototype.pxPerMsModes = [1000/(10*60*1000), 2000/(10*60*1000), 4000/(10*60*1000), 8000/(10*60*1000)];//1倍、2倍、4倍、8倍
+  Tune.prototype.pxPerMsModes = _([1,2,4,8,16,32]).map(function(ratio){
+    return 1000 / (10*60*1000) * ratio;
+  });
   Tune.prototype.refresh = function(smfData, synth){
     if(smfData.format != 1){
       throw 'まだ1しか受け付けません'
