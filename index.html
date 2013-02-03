@@ -143,11 +143,12 @@
   };
   
   
-  var Tune = function(rerenderTrack){//容量と互換性の都合でSMF形式に準拠する
+  var Tune = function(rerenderTrack, trackIsSelected){//容量と互換性の都合でSMF形式に準拠する
     this.format = 1;
     this.timeMode = 480;
     this.tracks = [];
     this.rerenderTrack = rerenderTrack;
+    this.trackIsSelected = trackIsSelected;
   };
   Tune.prototype.refresh = function(smfData, synth){
     if(smfData.format != 1){
@@ -187,6 +188,16 @@
     }, this.rerenderTrack);
     this.tracks.push(track);//とりあえず1trackに
   };
+  Tune.prototype.foreachTrack = function(f){
+    _(this.tracks).each(function(track){
+      f(track);
+    });
+  };
+  Tune.prototype.foreachSelectedTrack = function(f){
+    this.foreachTrack(function(track){
+      this.trackIsSelected(track) && f(track);
+    })
+  };
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
 
@@ -206,36 +217,30 @@
       this.playing = false;
       this.recState = new RecState();
     };
-    Sequencer.prototype.foreachTrack = function(f){
-      _(this.tune.tracks).each(function(track){
-        f(track);
-      });
-    };
+    
     Sequencer.prototype.send = function(t, m0, m1, m2){
       this.recState.send(m0, m1, m2);
       if(this.playing == 'recoding'){
         var that = this;
-        this.foreachTrack(function(track){
-          if($scope.trackIsSelected(track)){
-            var canvas = document.getElementById('' + track.id);
-            var ctx = canvas.getContext('2d');
-            ctx.fillStyle = "#4444ff";
-            ctx.beginPath();
-            var x = that.recState.getLocation() * 0.01;
-            var y = (127 - m1);
-            ctx.fillRect(x, y, 2, 2);
-          }
+        this.tune.foreachSelectedTrack(function(track){
+          var canvas = document.getElementById('' + track.id);
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = "#4444ff";
+          ctx.beginPath();
+          var x = that.recState.getLocation() * 0.01;
+          var y = (127 - m1);
+          ctx.fillRect(x, y, 2, 2);
         });
       }
-      this.foreachTrack(function(track){
-        $scope.trackIsSelected(track) && track.putMidi(m0, m1, m2);
+      this.tune.foreachSelectedTrack(function(track){
+        track.putMidi(m0, m1, m2);
       });
     };
     Sequencer.prototype.rec = function(){
       this.play('recoding');
     };
     Sequencer.prototype.stopPlaying = function(){
-      this.foreachTrack(function(track){
+      this.tune.foreachTrack(function(track){
         track.allSoundOff();
       });
     };
@@ -247,13 +252,13 @@
       this.recState = new RecState();
       if(optMode == 'recoding'){
         this.recState.onNoteFinished = function(note, velocity, startTime, endTime){
-          that.foreachTrack(function(track){
-            $scope.trackIsSelected(track) && track.recNote(note, velocity, that.msToTick(startTime), that.msToTick(endTime));
+          that.tune.foreachSelectedTrack(function(track){
+            track.recNote(note, velocity, that.msToTick(startTime), that.msToTick(endTime));
           });
         };
         this.recState.onElse = function(time, m0, m1, m2){
-          that.foreachTrack(function(track){
-            $scope.trackIsSelected(track) && track.recElse(that.msToTick(time),m0, m1, m2);
+          that.tune.foreachSelectedTrack(function(track){
+            track.recElse(that.msToTick(time),m0, m1, m2);
           });
         };
       }
@@ -267,7 +272,7 @@
         return a[0][0] - b[0][0];
       });
       //console.log(messageTrackPairs);
-      that.foreachTrack(function(track){
+      that.tune.foreachTrack(function(track){
         track.programChange();//synthロード後にダメ押し
       });
       var index = 0;
@@ -336,7 +341,9 @@
     
     $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
     $scope.selectedTrackId = -1;
-    $scope.tune = new Tune(rerenderTrack);
+    $scope.tune = new Tune(rerenderTrack, function(track){
+      $scope.trackIsSelected(track);
+    });
     
     $scope.saveContents = function(){
       _($scope.tune.tracks).each(function(track){
@@ -364,8 +371,6 @@
         return new Track(_track, rerenderTrack);
       }) : [];
       
-      
-      
       trackId = tracks.length + 1;
       $scope.sequencer = new Sequencer($scope.tune);
       
@@ -383,7 +388,7 @@
       $scope.selectedTrackId = track.id;
     };
     $scope.trackIsSelected = function(track){
-      return track.id == $scope.selectedTrackId ? 'selected' : null;
+      return (track.id == $scope.selectedTrackId) ? 'selected' : null;
     };
       
     $scope.messages = [];
