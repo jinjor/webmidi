@@ -175,7 +175,9 @@
         synth: synth,
         channel: 1,
         messages: messages
-      }, that.rerenderTrack);
+      }, function(track){
+        that.rerenderTrack(track)
+      });
     });
   };
   Tune.prototype.rerenderTrack = function(track){
@@ -215,7 +217,9 @@
         name: '_',
         synth: synth,
         channel: channel
-    }, this.rerenderTrack);
+    }, function(track){
+      this.rerenderTrack(track);
+    });
     this.tracks.push(track);//とりあえず1trackに
   };
   Tune.prototype.foreachTrack = function(f){
