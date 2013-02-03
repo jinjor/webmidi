@@ -143,13 +143,14 @@
   };
   
   
-  var Tune = function(rerenderTrack){//容量と互換性の都合でSMF形式に準拠する
+  var Tune = function(){//容量と互換性の都合でSMF形式に準拠する
     this.format = 1;
     this.timeMode = 480;
     this.tracks = [];
-    this.rerenderTrack = rerenderTrack;
     this.selectedTrackId = -1;
+    this.pxPerMsMode = 0;//1倍
   };
+  Tune.prototype.pxPerMsModes = [1000/(10*60*1000), 2000/(10*60*1000), 4000/(10*60*1000), 8000/(10*60*1000)];//1倍、2倍、4倍、8倍
   Tune.prototype.refresh = function(smfData, synth){
     if(smfData.format != 1){
       throw 'まだ1しか受け付けません'
@@ -174,6 +175,33 @@
         messages: messages
       }, that.rerenderTrack);
     });
+  };
+  Tune.prototype.rerenderTrack = function(track){
+    var canvas = document.getElementById('' + track.id);
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0, canvas.width, canvas.height);
+    ctx.fillStyle = "#4444ff";
+    ctx.beginPath();
+    var that = this;
+    _(track.messages).each(function(message){
+      var x1 = message[0] * that.getPxPerMs();
+      var y1 = (127 - message[2]);
+      ctx.fillRect(x1, y1, 2, 2);
+    });
+  };
+  Tune.prototype.getPxPerMs = function(){
+    return this.pxPerMsModes[this.pxPerMsMode];
+  };
+  Tune.prototype.hasMaxPxPerMs = function(){
+    return this.pxPerMsMode >= this.pxPerMsModes.length-1;
+  };
+  Tune.prototype.hasMinPxPerMs = function(){
+    return this.pxPerMsMode <= 0;
+  };
+  Tune.prototype.gainPxPerMs = function(amount){
+    var pxPerMsMode = this.pxPerMsMode + amount;
+    this.pxPerMsMode = (pxPerMsMode < 0) ? 0 : ((pxPerMsMode >= this.pxPerMsModes.length) ? this.pxPerMsModes.length-1 : pxPerMsMode);
+    this.rerender();
   };
   Tune.prototype.rerender = function(){
     _(this.tracks).each(function(track){
@@ -321,20 +349,7 @@
     Sequencer.prototype.msToTick = function(ms){
       return Math.floor(ms / this.getTimePerTick());
     };
-      
-    var rerenderTrack = function(track){
-      var canvas = document.getElementById('' + track.id);
-      var ctx = canvas.getContext('2d');
-      ctx.clearRect(0,0, canvas.width, canvas.height);
-      ctx.fillStyle = "#4444ff";
-      ctx.beginPath();
-      _(track.messages).each(function(message){
-        var x1 = message[0] * 0.003;
-        var y1 = (127 - message[2]);
-        ctx.fillRect(x1, y1, 2, 2);
-      });
-    };
-    
+
     $scope.synths = {};
     _(org.jinjor.synth.synthDefs).each(function(synthDef){
       $scope.synths[synthDef.name] = new Synth(synthDef.name, synthDef.url, synthDef.author, synthDef.programs);
@@ -344,7 +359,7 @@
     };
     
     $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
-    $scope.tune = new Tune(rerenderTrack);
+    $scope.tune = new Tune();
     
     $scope.saveContents = function(){
       _($scope.tune.tracks).each(function(track){
@@ -369,7 +384,9 @@
         _track.messages = _(_track.messages).filter(function(e){//下位互換
           return (e.message || e.time) ? false : true;
         });
-        return new Track(_track, rerenderTrack);
+        return new Track(_track, function(track){
+          $scope.tune.rerenderTrack(track);
+        });
       }) : [];
       
       trackId = tracks.length + 1;
@@ -394,7 +411,9 @@
       
     $scope.messages = [];
     $scope.keyIsPressed = function(track){
-      return ($scope.tune.trackIsSelected(track) && $scope.sequencer.recState && $scope.sequencer.recState.keyIsPressed()) ? 'pressed' : '';
+      return ($scope.tune.trackIsSelected(track) &&
+              $scope.sequencer.recState &&
+              $scope.sequencer.recState.keyIsPressed()) ? 'pressed' : '';
     };
     $scope.playing = false;
     $scope.rec = function(){
@@ -483,6 +502,10 @@
     <button ng-click="rec()" ng-disabled="sequencer.playing">●Rec</button>
     <button ng-click="play()" ng-disabled="sequencer.playing">Play</button>
     <button ng-click="stop()" ng-disabled="!sequencer.playing">Stop</button>
+  </div>
+  <div>
+    <button ng-click="tune.gainPxPerMs(-1)" ng-disabled="tune.hasMinPxPerMs()">-</button>
+    <button ng-click="tune.gainPxPerMs(1)" ng-disabled="tune.hasMaxPxPerMs()">+</button>
   </div>
   <div class="tracks">
     <ul>
