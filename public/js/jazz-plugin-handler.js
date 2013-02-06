@@ -37,7 +37,7 @@ var JazzPlugin = {
         }
         $scope.currentMidiIn = Jazz.MidiInOpen ? Jazz.MidiInOpen(0, midiProc) : "";
         
-        $scope.midiIns = Jazz.MidiInList() || [];
+        $scope.midiIns = Jazz.MidiInList ? Jazz.MidiInList() : [];
         $scope.midiIns.unshift('Not connected');
 
         if(navigator.appName == 'Microsoft Internet Explorer'){
