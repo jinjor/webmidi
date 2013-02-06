@@ -35,9 +35,9 @@ var JazzPlugin = {
         if(!Jazz || !Jazz.isJazz) {
           Jazz = document.getElementById('Jazz2');
         }
-        $scope.currentMidiIn = Jazz.MidiInOpen(0, midiProc);
+        $scope.currentMidiIn = Jazz.MidiInOpen ? Jazz.MidiInOpen(0, midiProc) : "";
         
-        $scope.midiIns = Jazz.MidiInList();
+        $scope.midiIns = Jazz.MidiInList() || [];
         $scope.midiIns.unshift('Not connected');
 
         if(navigator.appName == 'Microsoft Internet Explorer'){
