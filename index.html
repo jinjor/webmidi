@@ -472,9 +472,9 @@
               $scope.tune.refresh(smfFile.smfData, $scope.synths.GMPlayer);
               $scope.$apply();
               setTimeout(function(){
-                $scope.tune.readyToRerender();
-                $scope.tune.rerender();
-              },20);
+                $scope.tune.readyToRender();
+                $scope.tune.rerenderTracks();
+              },0);
             });
             event.preventDefault();
           });
