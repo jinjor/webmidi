@@ -146,6 +146,7 @@
     var that = this;
     var rerenders = [];
     _(this.tracks).each(function(track){
+      var frame = document.getElementById('pianoroll_summary.' + track.id);
       var canvas1 = document.getElementById('' + track.id + ".1");
       var canvas2 = document.getElementById('' + track.id + ".2");
       var ctx1 = canvas1.getContext('2d');
@@ -161,12 +162,14 @@
           ctx2.clearRect(0,0, canvas2.width, canvas2.height);
           ctx2.fillRect(recState.getLocation() * pxPerMs, 0, 1, 127);
         }else{
+          ctx2.clearRect(0,0, canvas2.width, canvas2.height);
           ctx1.clearRect(0,0, canvas1.width, canvas1.height);
           _(track.messages).each(function(message){
             var x1 = message[0] * pxPerMs;
             var y1 = (127 - message[2]);
             ctx1.fillRect(x1, y1, 2, 2);
           });
+          ctx1.clearRect(frame.offsetWidth, 0, canvas1.width, canvas1.height);
         }
       });
     });
@@ -345,8 +348,7 @@
         if(that.playing){
           var s = new Date().getTime();
           that.tune.rerenderTracks(that.recState);
-          console.log(new Date().getTime() - s);
-          setTimeout(render, 10);
+          setTimeout(render, 30);
         }
       };
       tick();
@@ -531,7 +533,7 @@
             <input type="submit" value="Delete"></input>
           </form>
         </div>
-        <div class="pianoroll_summary">
+        <div id="pianoroll_summary.{{track.id}}" class="pianoroll_summary">
           <canvas class="layer1" id="{{track.id}}.1" width="1000px" height="128px"></canvas>
           <canvas class="layer2" id="{{track.id}}.2" width="1000px" height="128px"></canvas>
         </div>
