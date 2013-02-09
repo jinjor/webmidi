@@ -112,6 +112,20 @@
     };
     this.programChange(this.program.number);
   };
+  Track.prototype.readyToRender = function(){
+    var canvas = document.getElementById('' + this.id);
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = "#4444ff";
+    ctx.beginPath();
+    this.rerenderMidiMessage = function(message, pxPerMs){
+      var x1 = message[0] * pxPerMs;
+      var y1 = (127 - message[2]);
+      ctx.fillRect(x1, y1, 2, 2);
+    };
+    this.clearRendering = function(){
+      ctx.clearRect(0,0, canvas.width, canvas.height);
+    };
+  };
   Track.prototype.recNote = function(note, velocity, startTime, endTime){
     this.messages.push([startTime, 0x90, note, velocity]);
     this.messages.push([endTime, 0x80, note, 0]);
@@ -150,6 +164,11 @@
     this.selectedTrackId = -1;
     this.pxPerMsMode = 0;//1倍
   };
+  Tune.prototype.readyToRender = function(){
+    this.foreachTrack(function(track){
+      track.readyToRender();
+    });
+  };
   Tune.prototype.pxPerMsModes = _([1,2,4,8,16,32]).map(function(ratio){
     return 1000 / (10*60*1000) * ratio;
   });
@@ -162,7 +181,7 @@
     }
     this.format = smfData.format;
     this.timeMode = smfData.timeMode;
-    console.log("timeMode=" + this.timeMode)
+    console.log("timeMode=" + this.timeMode);
     var that = this;
     this.tracks = _(smfData.tracks).map(function(events){
       var deltaSum = 0;
@@ -181,16 +200,11 @@
     });
   };
   Tune.prototype.rerenderTrack = function(track){
-    var canvas = document.getElementById('' + track.id);
-    var ctx = canvas.getContext('2d');
-    ctx.clearRect(0,0, canvas.width, canvas.height);
-    ctx.fillStyle = "#4444ff";
-    ctx.beginPath();
+    track.clearRendering();
+    var pxPerMs = this.getPxPerMs();
     var that = this;
     _(track.messages).each(function(message){
-      var x1 = message[0] * that.getPxPerMs();
-      var y1 = (127 - message[2]);
-      ctx.fillRect(x1, y1, 2, 2);
+      track.rerenderMidiMessage(message, pxPerMs);
     });
   };
   Tune.prototype.getPxPerMs = function(){
@@ -222,6 +236,18 @@
     });
     this.tracks.push(track);//とりあえず1trackに
   };
+  Tune.prototype.replaceTracksByLoadedTracks = function(tracks, synths){
+    var that = this;
+    this.tracks = tracks ? _(tracks).map(function(_track){
+      _track.synth = synths[_track.synth.name];
+      _track.messages = _(_track.messages).filter(function(e){//下位互換
+        return (e.message || e.time) ? false : true;
+      });
+      return new Track(_track, function(track){
+        that.rerenderTrack(track);
+      });
+    }) : [];
+  };
   Tune.prototype.foreachTrack = function(f){
     _(this.tracks).each(function(track){
       f(track);
@@ -231,10 +257,16 @@
     var that = this;
     this.foreachTrack(function(track){
       that.trackIsSelected(track) && f(track);
-    })
+    });
   };
   Tune.prototype.trackIsSelected = function(track){
     return track.id == this.selectedTrackId;
+  };
+  Tune.prototype.renderRecState = function(recState, m0, m1, m2){
+    var that = this;
+    this.foreachSelectedTrack(function(track){
+      track.rerenderMidiMessage([recState.getLocation(), m0, m1, m2], that.getPxPerMs());
+    });
   };
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
@@ -258,17 +290,9 @@
     
     Sequencer.prototype.send = function(t, m0, m1, m2){
       this.recState.send(m0, m1, m2);
+      
       if(this.playing == 'recoding'){
-        var that = this;
-        this.tune.foreachSelectedTrack(function(track){
-          var canvas = document.getElementById('' + track.id);
-          var ctx = canvas.getContext('2d');
-          ctx.fillStyle = "#4444ff";
-          ctx.beginPath();
-          var x = that.recState.getLocation() * 0.003;
-          var y = (127 - m1);
-          ctx.fillRect(x, y, 2, 2);
-        });
+        this.tune.renderRecState(this.recState, m0, m1, m2);
       }
       this.tune.foreachSelectedTrack(function(track){
         track.putMidi(m0, m1, m2);
@@ -385,26 +409,15 @@
     
     $http({method: 'GET', url: '/contents/' + $scope.address}).success(function(tracks) {
       console.log(tracks);
-      $scope.tune.tracks = tracks ? _(tracks).map(function(_track){
-        _track.synth = $scope.synths[_track.synth.name];
-        _track.messages = _(_track.messages).filter(function(e){//下位互換
-          return (e.message || e.time) ? false : true;
-        });
-        return new Track(_track, function(track){
-          $scope.tune.rerenderTrack(track);
-        });
-      }) : [];
-      
-      trackId = tracks.length + 1;
+      $scope.tune.replaceTracksByLoadedTracks(tracks, $scope.synths);
       $scope.sequencer = new Sequencer($scope.tune);
-      
       _($scope.synths).each(function(synth){
         synth.load(document[synth.id]);
       });
       setTimeout(function(){
+        $scope.tune.readyToRender();
         $scope.tune.rerender();
       },20);
-      
     }).error(function(e) {
       alert(e);
     });
@@ -460,6 +473,7 @@
               $scope.tune.refresh(smfFile.smfData, $scope.synths.GMPlayer);
               $scope.$apply();
               setTimeout(function(){
+                $scope.tune.readyToRerender();
                 $scope.tune.rerender();
               },20);
             });
