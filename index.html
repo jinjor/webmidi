@@ -166,7 +166,7 @@
           ctx2.clearRect(0,0, canvas2.width, canvas2.height);
           ctx1.clearRect(0,0, canvas1.width, canvas1.height);
           _(track.messages).each(function(message){
-            var x1 = message[0] * pxPerMs;
+            var x1 = that.tickToMs(message[0]) * pxPerMs;
             var y1 = (127 - message[2]);
             ctx1.fillRect(x1, y1, 2, 2);
           });
@@ -257,6 +257,16 @@
   Tune.prototype.trackIsSelected = function(track){
     return track.id == this.selectedTrackId;
   };
+  Tune.prototype.tickToMs = function(tick){
+    return Math.floor(this.getTimePerTick() * tick);
+  };
+  Tune.prototype.getTimePerTick = function(){
+    var tempo = 120;//TODO
+    return 1000*60/(this.timeMode * tempo);
+  };
+  Tune.prototype.msToTick = function(ms){
+    return Math.floor(ms / this.getTimePerTick());
+  };
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
 
@@ -300,12 +310,12 @@
       if(optMode == 'recoding'){
         this.recState.onNoteFinished = function(note, velocity, startTime, endTime){
           that.tune.foreachSelectedTrack(function(track){
-            track.recNote(note, velocity, that.msToTick(startTime), that.msToTick(endTime));
+            track.recNote(note, velocity, that.tune.msToTick(startTime), that.tune.msToTick(endTime));
           });
         };
         this.recState.onElse = function(time, m0, m1, m2){
           that.tune.foreachSelectedTrack(function(track){
-            track.recElse(that.msToTick(time),m0, m1, m2);
+            track.recElse(that.tune.msToTick(time),m0, m1, m2);
           });
         };
       }
@@ -337,7 +347,7 @@
         }else if(!current){
           that.stop();
           $scope.$apply();
-        }else if(that.tickToMs(currentMessage[0]) < location){
+        }else if(that.tune.tickToMs(currentMessage[0]) < location){
           currentTrack.putMidi(currentMessage[1], currentMessage[2], currentMessage[3]);
           index++;
           tick();
@@ -362,16 +372,7 @@
       this.playing = null;
       this.stopPlaying();
     };
-    Sequencer.prototype.tickToMs = function(tick){
-      return Math.floor(this.getTimePerTick() * tick);
-    };
-    Sequencer.prototype.getTimePerTick = function(){
-      var tempo = 120;//TODO
-      return 1000*60/(this.tune.timeMode * tempo);
-    };
-    Sequencer.prototype.msToTick = function(ms){
-      return Math.floor(ms / this.getTimePerTick());
-    };
+
 
     $scope.synths = {};
     _(org.jinjor.synth.synthDefs).each(function(synthDef){
