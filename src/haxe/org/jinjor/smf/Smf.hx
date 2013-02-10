@@ -1,6 +1,7 @@
 package org.jinjor.smf;
 
 import js.Lib;
+import org.jinjor.synth.SynthDef;
 
 class Smf {
     static function main() {

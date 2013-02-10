@@ -8,8 +8,7 @@
   <script type="text/javascript" src="/js/underscore-min.js"></script>
   <script type="text/javascript" src="/js/jazz-plugin-handler.js"></script>
   <script type="text/javascript" src="/js/footerFixed.js"></script>
-  <script type="text/javascript" src="/js/smf.js"></script>
-  <script type="text/javascript" src="/js/synthdefs.js"></script>
+  <script type="text/javascript" src="/js/webmidi.js"></script>
   
   <link rel="stylesheet" type="text/css" href="/css/base.css"/>
   <script type="text/javascript">
@@ -372,9 +371,8 @@
       this.stopPlaying();
     };
 
-
     $scope.synths = {};
-    _(org.jinjor.synth.synthDefs).each(function(synthDef){
+    _(org.jinjor.synth.SynthDef.synthDefs).each(function(synthDef){
       $scope.synths[synthDef.name] = new Synth(synthDef.name, synthDef.url, synthDef.author, synthDef.programs);
     });
     $scope.synthsAsArray = function(){

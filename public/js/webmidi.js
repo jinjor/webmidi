@@ -357,6 +357,17 @@ org.jinjor.smf.SmfFile.__name__ = true;
 org.jinjor.smf.SmfFile.prototype = {
 	__class__: org.jinjor.smf.SmfFile
 }
+if(!org.jinjor.synth) org.jinjor.synth = {}
+org.jinjor.synth.SynthDef = function(name,url,author,programs) {
+	this.name = name;
+	this.url = url;
+	this.author = author;
+	this.programs = programs;
+};
+org.jinjor.synth.SynthDef.__name__ = true;
+org.jinjor.synth.SynthDef.prototype = {
+	__class__: org.jinjor.synth.SynthDef
+}
 if(Array.prototype.indexOf) HxOverrides.remove = function(a,o) {
 	var i = a.indexOf(o);
 	if(i == -1) return false;
@@ -397,4 +408,7 @@ if(typeof window != "undefined") {
 		return f(msg,[url + ":" + line]);
 	};
 }
+org.jinjor.synth.SynthDef.GMPlayer = new org.jinjor.synth.SynthDef("GMPlayer","http://www.g200kg.com/en/docs/gmplayer/","g200kg",{ '1' : { number : 1, description : ""}, '2' : { number : 2, description : ""}, '3' : { number : 3, description : ""}, '4' : { number : 4, description : ""}, '5' : { number : 5, description : ""}, '6' : { number : 6, description : ""}, '7' : { number : 7, description : ""}, '8' : { number : 8, description : ""}, '9' : { number : 9, description : ""}, '10' : { number : 10, description : ""}});
+org.jinjor.synth.SynthDef.WebBeeper = new org.jinjor.synth.SynthDef("WebBeeper","http://www.g200kg.com/en/docs/webbeeper/","g200kg",{ '1' : { number : 1, description : ""}, '2' : { number : 2, description : ""}, '3' : { number : 3, description : ""}, '4' : { number : 4, description : ""}, '5' : { number : 5, description : ""}, '6' : { number : 6, description : ""}, '7' : { number : 7, description : ""}, '8' : { number : 8, description : ""}, '9' : { number : 9, description : ""}, '10' : { number : 10, description : ""}});
+org.jinjor.synth.SynthDef.synthDefs = [org.jinjor.synth.SynthDef.GMPlayer,org.jinjor.synth.SynthDef.WebBeeper];
 org.jinjor.smf.Smf.main();
