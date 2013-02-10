@@ -1,6 +1,8 @@
 package org.jinjor.webmidi;
+
 import js.Lib;
 using Lambda;
+using org.jinjor.util.Util;
 
 class RecState{
   public var keyCount : Int;
@@ -55,22 +57,22 @@ class Track {
   public var id : Int;
   public var name : String;
   public var synth : Dynamic;
-  public var channel : Dynamic;
+  public var channel : Int;
   public var program : Dynamic;
   public var selected : Bool;
   public var messages : Array<Array<Int>>;
 
-  public function new(name, synth, channel, program : Dynamic, messages : Array<Array<Int>>){
+  public function new(name, synth, channel : Int, program : Dynamic, messages : Array<Array<Int>>){
     this.id = createTrackId();
     this.name = name;
     this.synth = synth;
-    this.channel = if(channel != null) channel else 1;
+    this.channel = channel.or(1);
     this.program = if(program != null) this.synth.programs[program.number] else this.synth.programs[1];
     if(this.program == null){
       this.program = this.synth.programs[1];//緊急対応
     }
     this.selected = true;
-    this.messages = if(messages != null) messages else [[Math.floor(1000*60*10/(1000*60/480*120)), 0x80, 62, 0]];
+    this.messages = messages.or([[Math.floor(1000*60*10/(1000*60/480*120)), 0x80, 62, 0]]);
     this.programChange(this.program.number);
   }
 
@@ -88,7 +90,7 @@ class Track {
     this.putMidi(0x80, note, 0);
   }
   public function programChange(number : Int) {
-    this.putMidi(0xc0, if(number != null) number else this.program.number, 0);
+    this.putMidi(0xc0, number.or(this.program.number), 0);
   }
   public function allSoundOff() {
     this.synth.allSoundOff();
@@ -162,7 +164,7 @@ class Tune {//容量と互換性の都合でSMF形式に準拠する
   }
   public function replaceTracksByLoadedTracks(tracks : Array<Dynamic>, synths){
     var that = this;
-    this.tracks = if(tracks != null) tracks.map(function(_track){
+    this.tracks = (tracks.mapO(function(_track){
       return new Track(
         _track.name,
         synths[_track.synth.name],
@@ -171,7 +173,7 @@ class Tune {//容量と互換性の都合でSMF形式に準拠する
         _track.messages.filter(function(e){//下位互換
           return (e.message == null && e.time == null);
         }));
-    }).array() else [];
+    }).arrayO()).or([]);
   }
   public function getSelectedTracks() : Array<Track> {
     var that = this;

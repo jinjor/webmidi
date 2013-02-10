@@ -681,11 +681,16 @@ org.jinjor.util.Util.__name__ = true;
 org.jinjor.util.Util.or = function(a,b) {
 	return a != null?a:b;
 }
+org.jinjor.util.Util.mapO = function(it,f) {
+	return it != null?Lambda.map(it,f):null;
+}
+org.jinjor.util.Util.arrayO = function(it) {
+	return it != null?Lambda.array(it):null;
+}
 if(!org.jinjor.webmidi) org.jinjor.webmidi = {}
 org.jinjor.webmidi.All = function() { }
 org.jinjor.webmidi.All.__name__ = true;
 org.jinjor.webmidi.All.main = function() {
-	haxe.Log.trace("hello.",{ fileName : "All.hx", lineNumber : 11, className : "org.jinjor.webmidi.All", methodName : "main"});
 }
 org.jinjor.webmidi.Sequencer = function(tune) {
 	this.location = 0;
@@ -818,11 +823,11 @@ org.jinjor.webmidi.Track = function(name,synth,channel,program,messages) {
 	this.id = org.jinjor.webmidi.Track.createTrackId();
 	this.name = name;
 	this.synth = synth;
-	this.channel = channel != null?channel:1;
+	this.channel = org.jinjor.util.Util.or(channel,1);
 	this.program = program != null?this.synth.programs[program.number]:this.synth.programs[1];
 	if(this.program == null) this.program = this.synth.programs[1];
 	this.selected = true;
-	this.messages = messages != null?messages:[[Math.floor(40.),128,62,0]];
+	this.messages = org.jinjor.util.Util.or(messages,[[Math.floor(40.),128,62,0]]);
 	this.programChange(this.program.number);
 };
 org.jinjor.webmidi.Track.__name__ = true;
@@ -843,7 +848,7 @@ org.jinjor.webmidi.Track.prototype = {
 		this.synth.allSoundOff();
 	}
 	,programChange: function(number) {
-		this.putMidi(192,number != null?number:this.program.number,0);
+		this.putMidi(192,org.jinjor.util.Util.or(number,this.program.number),0);
 	}
 	,noteOff: function(note) {
 		this.putMidi(128,note,0);
@@ -890,11 +895,11 @@ org.jinjor.webmidi.Tune.prototype = {
 	}
 	,replaceTracksByLoadedTracks: function(tracks,synths) {
 		var that = this;
-		this.tracks = tracks != null?Lambda.array(Lambda.map(tracks,function(_track) {
+		this.tracks = org.jinjor.util.Util.or(org.jinjor.util.Util.arrayO(org.jinjor.util.Util.mapO(tracks,function(_track) {
 			return new org.jinjor.webmidi.Track(_track.name,synths[_track.synth.name],_track.channel,_track.program,_track.messages.filter(function(e) {
 				return e.message == null && e.time == null;
 			}));
-		})):[];
+		})),[]);
 	}
 	,addTrack: function(synth,channel) {
 		var track = new org.jinjor.webmidi.Track("_",synth,channel,null,null);
@@ -918,7 +923,7 @@ org.jinjor.webmidi.Tune.prototype = {
 		if(smfData.timeMode > 32768) throw "まだMSB=0しか受け付けません";
 		this.format = smfData.format;
 		this.timeMode = smfData.timeMode;
-		haxe.Log.trace("timeMode=" + this.timeMode,{ fileName : "Tune.hx", lineNumber : 135, className : "org.jinjor.webmidi.Tune", methodName : "refresh"});
+		haxe.Log.trace("timeMode=" + this.timeMode,{ fileName : "Tune.hx", lineNumber : 137, className : "org.jinjor.webmidi.Tune", methodName : "refresh"});
 		var that = this;
 		this.tracks = smfData.tracks.map(function(events) {
 			var deltaSum = 0;

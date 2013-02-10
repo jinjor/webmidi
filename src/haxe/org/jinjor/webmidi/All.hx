@@ -8,6 +8,5 @@ import org.jinjor.webmidi.Sequencer;
 
 class All{
   public static function main(){
-    trace('hello.');
   }
 }
