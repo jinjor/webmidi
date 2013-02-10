@@ -1,0 +1,3 @@
+-cp public/haxe
+-js public/js/smf2.js
+-main org.jinjor.smf.SMF2
