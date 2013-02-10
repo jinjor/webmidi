@@ -77,6 +77,255 @@ IntIter.prototype = {
 	}
 	,__class__: IntIter
 }
+var Lambda = function() { }
+Lambda.__name__ = true;
+Lambda.array = function(it) {
+	var a = new Array();
+	var $it0 = $iterator(it)();
+	while( $it0.hasNext() ) {
+		var i = $it0.next();
+		a.push(i);
+	}
+	return a;
+}
+Lambda.list = function(it) {
+	var l = new List();
+	var $it0 = $iterator(it)();
+	while( $it0.hasNext() ) {
+		var i = $it0.next();
+		l.add(i);
+	}
+	return l;
+}
+Lambda.map = function(it,f) {
+	var l = new List();
+	var $it0 = $iterator(it)();
+	while( $it0.hasNext() ) {
+		var x = $it0.next();
+		l.add(f(x));
+	}
+	return l;
+}
+Lambda.mapi = function(it,f) {
+	var l = new List();
+	var i = 0;
+	var $it0 = $iterator(it)();
+	while( $it0.hasNext() ) {
+		var x = $it0.next();
+		l.add(f(i++,x));
+	}
+	return l;
+}
+Lambda.has = function(it,elt,cmp) {
+	if(cmp == null) {
+		var $it0 = $iterator(it)();
+		while( $it0.hasNext() ) {
+			var x = $it0.next();
+			if(x == elt) return true;
+		}
+	} else {
+		var $it1 = $iterator(it)();
+		while( $it1.hasNext() ) {
+			var x = $it1.next();
+			if(cmp(x,elt)) return true;
+		}
+	}
+	return false;
+}
+Lambda.exists = function(it,f) {
+	var $it0 = $iterator(it)();
+	while( $it0.hasNext() ) {
+		var x = $it0.next();
+		if(f(x)) return true;
+	}
+	return false;
+}
+Lambda.foreach = function(it,f) {
+	var $it0 = $iterator(it)();
+	while( $it0.hasNext() ) {
+		var x = $it0.next();
+		if(!f(x)) return false;
+	}
+	return true;
+}
+Lambda.iter = function(it,f) {
+	var $it0 = $iterator(it)();
+	while( $it0.hasNext() ) {
+		var x = $it0.next();
+		f(x);
+	}
+}
+Lambda.filter = function(it,f) {
+	var l = new List();
+	var $it0 = $iterator(it)();
+	while( $it0.hasNext() ) {
+		var x = $it0.next();
+		if(f(x)) l.add(x);
+	}
+	return l;
+}
+Lambda.fold = function(it,f,first) {
+	var $it0 = $iterator(it)();
+	while( $it0.hasNext() ) {
+		var x = $it0.next();
+		first = f(x,first);
+	}
+	return first;
+}
+Lambda.count = function(it,pred) {
+	var n = 0;
+	if(pred == null) {
+		var $it0 = $iterator(it)();
+		while( $it0.hasNext() ) {
+			var _ = $it0.next();
+			n++;
+		}
+	} else {
+		var $it1 = $iterator(it)();
+		while( $it1.hasNext() ) {
+			var x = $it1.next();
+			if(pred(x)) n++;
+		}
+	}
+	return n;
+}
+Lambda.empty = function(it) {
+	return !$iterator(it)().hasNext();
+}
+Lambda.indexOf = function(it,v) {
+	var i = 0;
+	var $it0 = $iterator(it)();
+	while( $it0.hasNext() ) {
+		var v2 = $it0.next();
+		if(v == v2) return i;
+		i++;
+	}
+	return -1;
+}
+Lambda.concat = function(a,b) {
+	var l = new List();
+	var $it0 = $iterator(a)();
+	while( $it0.hasNext() ) {
+		var x = $it0.next();
+		l.add(x);
+	}
+	var $it1 = $iterator(b)();
+	while( $it1.hasNext() ) {
+		var x = $it1.next();
+		l.add(x);
+	}
+	return l;
+}
+var List = function() {
+	this.length = 0;
+};
+List.__name__ = true;
+List.prototype = {
+	map: function(f) {
+		var b = new List();
+		var l = this.h;
+		while(l != null) {
+			var v = l[0];
+			l = l[1];
+			b.add(f(v));
+		}
+		return b;
+	}
+	,filter: function(f) {
+		var l2 = new List();
+		var l = this.h;
+		while(l != null) {
+			var v = l[0];
+			l = l[1];
+			if(f(v)) l2.add(v);
+		}
+		return l2;
+	}
+	,join: function(sep) {
+		var s = new StringBuf();
+		var first = true;
+		var l = this.h;
+		while(l != null) {
+			if(first) first = false; else s.b += Std.string(sep);
+			s.b += Std.string(l[0]);
+			l = l[1];
+		}
+		return s.b;
+	}
+	,toString: function() {
+		var s = new StringBuf();
+		var first = true;
+		var l = this.h;
+		s.b += Std.string("{");
+		while(l != null) {
+			if(first) first = false; else s.b += Std.string(", ");
+			s.b += Std.string(Std.string(l[0]));
+			l = l[1];
+		}
+		s.b += Std.string("}");
+		return s.b;
+	}
+	,iterator: function() {
+		return { h : this.h, hasNext : function() {
+			return this.h != null;
+		}, next : function() {
+			if(this.h == null) return null;
+			var x = this.h[0];
+			this.h = this.h[1];
+			return x;
+		}};
+	}
+	,remove: function(v) {
+		var prev = null;
+		var l = this.h;
+		while(l != null) {
+			if(l[0] == v) {
+				if(prev == null) this.h = l[1]; else prev[1] = l[1];
+				if(this.q == l) this.q = prev;
+				this.length--;
+				return true;
+			}
+			prev = l;
+			l = l[1];
+		}
+		return false;
+	}
+	,clear: function() {
+		this.h = null;
+		this.q = null;
+		this.length = 0;
+	}
+	,isEmpty: function() {
+		return this.h == null;
+	}
+	,pop: function() {
+		if(this.h == null) return null;
+		var x = this.h[0];
+		this.h = this.h[1];
+		if(this.h == null) this.q = null;
+		this.length--;
+		return x;
+	}
+	,last: function() {
+		return this.q == null?null:this.q[0];
+	}
+	,first: function() {
+		return this.h == null?null:this.h[0];
+	}
+	,push: function(item) {
+		var x = [item,this.h];
+		this.h = x;
+		if(this.q == null) this.q = x;
+		this.length++;
+	}
+	,add: function(item) {
+		var x = [item];
+		if(this.h == null) this.h = x; else this.q[1] = x;
+		this.q = x;
+		this.length++;
+	}
+	,__class__: List
+}
 var Std = function() { }
 Std.__name__ = true;
 Std["is"] = function(v,t) {
@@ -99,6 +348,68 @@ Std.parseFloat = function(x) {
 }
 Std.random = function(x) {
 	return Math.floor(Math.random() * x);
+}
+var StringBuf = function() {
+	this.b = "";
+};
+StringBuf.__name__ = true;
+StringBuf.prototype = {
+	toString: function() {
+		return this.b;
+	}
+	,addSub: function(s,pos,len) {
+		this.b += HxOverrides.substr(s,pos,len);
+	}
+	,addChar: function(c) {
+		this.b += String.fromCharCode(c);
+	}
+	,add: function(x) {
+		this.b += Std.string(x);
+	}
+	,__class__: StringBuf
+}
+var haxe = haxe || {}
+haxe.Log = function() { }
+haxe.Log.__name__ = true;
+haxe.Log.trace = function(v,infos) {
+	js.Boot.__trace(v,infos);
+}
+haxe.Log.clear = function() {
+	js.Boot.__clear_trace();
+}
+haxe.Timer = function(time_ms) {
+	var me = this;
+	this.id = window.setInterval(function() {
+		me.run();
+	},time_ms);
+};
+haxe.Timer.__name__ = true;
+haxe.Timer.delay = function(f,time_ms) {
+	var t = new haxe.Timer(time_ms);
+	t.run = function() {
+		t.stop();
+		f();
+	};
+	return t;
+}
+haxe.Timer.measure = function(f,pos) {
+	var t0 = haxe.Timer.stamp();
+	var r = f();
+	haxe.Log.trace(haxe.Timer.stamp() - t0 + "s",pos);
+	return r;
+}
+haxe.Timer.stamp = function() {
+	return new Date().getTime() / 1000;
+}
+haxe.Timer.prototype = {
+	run: function() {
+	}
+	,stop: function() {
+		if(this.id == null) return;
+		window.clearInterval(this.id);
+		this.id = null;
+	}
+	,__class__: haxe.Timer
 }
 var js = js || {}
 js.Boot = function() { }
@@ -267,7 +578,7 @@ org.jinjor.smf.SmfData = function(data) {
 		var i = _g++;
 		var chunkType = [buf[p++],buf[p++],buf[p++],buf[p++]];
 		if(!(chunkType[0] == 77 && chunkType[1] == 84 && chunkType[2] == 114 && chunkType[3] == 107)) throw "チャンク名が不正です";
-		console.log("Track start!");
+		haxe.Log.trace("Track start!",{ fileName : "Smf.hx", lineNumber : 49, className : "org.jinjor.smf.SmfData", methodName : "new"});
 		var dataLength = buf[p++] * 256 * 256 * 256 + buf[p++] * 256 * 256 + buf[p++] * 256 + buf[p++];
 		var end = p + dataLength;
 		var events = [];
@@ -320,7 +631,7 @@ org.jinjor.smf.SmfData = function(data) {
 		tracks.push(events);
 	}
 	this.tracks = tracks;
-	console.log(tracks);
+	haxe.Log.trace(tracks,{ fileName : "Smf.hx", lineNumber : 113, className : "org.jinjor.smf.SmfData", methodName : "new"});
 };
 org.jinjor.smf.SmfData.__name__ = true;
 org.jinjor.smf.SmfData.getVariableLength = function(buf,p) {
@@ -364,10 +675,108 @@ org.jinjor.synth.SynthDef.__name__ = true;
 org.jinjor.synth.SynthDef.prototype = {
 	__class__: org.jinjor.synth.SynthDef
 }
+if(!org.jinjor.util) org.jinjor.util = {}
+org.jinjor.util.Util = function() { }
+org.jinjor.util.Util.__name__ = true;
+org.jinjor.util.Util.or = function(a,b) {
+	return a != null?a:b;
+}
 if(!org.jinjor.webmidi) org.jinjor.webmidi = {}
 org.jinjor.webmidi.All = function() { }
 org.jinjor.webmidi.All.__name__ = true;
 org.jinjor.webmidi.All.main = function() {
+	haxe.Log.trace("hello.",{ fileName : "All.hx", lineNumber : 11, className : "org.jinjor.webmidi.All", methodName : "main"});
+}
+org.jinjor.webmidi.Sequencer = function(tune) {
+	this.location = 0;
+	this.tune = tune;
+	this.playing = null;
+	this.recState = null;
+};
+org.jinjor.webmidi.Sequencer.__name__ = true;
+org.jinjor.webmidi.Sequencer.prototype = {
+	stop: function() {
+		haxe.Log.trace("stop",{ fileName : "Sequencer.hx", lineNumber : 106, className : "org.jinjor.webmidi.Sequencer", methodName : "stop"});
+		this.location = 0;
+		this.playing = null;
+		this.stopPlaying();
+	}
+	,play: function(rerender,optMode) {
+		if(this.tune.tracks.length <= 0) return;
+		var that = this;
+		this.recState = new org.jinjor.webmidi.RecState();
+		if(optMode == "recoding") {
+			this.recState.onNoteFinished = function(note,velocity,startTime,endTime) {
+				Lambda.foreach(that.tune.getSelectedTracks(),function(track) {
+					track.recNote(note,velocity,that.tune.msToTick(startTime),that.tune.msToTick(endTime));
+					return true;
+				});
+			};
+			this.recState.onElse = function(time,m0,m1,m2) {
+				Lambda.foreach(that.tune.getSelectedTracks(),function(track) {
+					track.recElse(that.tune.msToTick(time),m0,m1,m2);
+					return true;
+				});
+			};
+		}
+		var messageTrackPairs = Lambda.fold(this.tune.tracks,function(track,memo) {
+			var pairs = Lambda.array(Lambda.map(track.messages,function(mes) {
+				return [mes,track];
+			}));
+			return memo.concat(pairs);
+		},[]);
+		this.playing = optMode != null?optMode:"playing";
+		messageTrackPairs.sort(function(a,b) {
+			return a[0][0] - b[0][0];
+		});
+		Lambda.foreach(that.tune.tracks,function(track) {
+			track.programChange(null);
+			return true;
+		});
+		var index = 0;
+		var current = null;
+		var currentTrack = null;
+		var currentMessage = null;
+		var that1 = this;
+		var r = { };
+		r.tick = function() {
+			var location = that1.recState.getLocation();
+			current = index < messageTrackPairs.length?messageTrackPairs[index]:null;
+			currentTrack = current[1];
+			currentMessage = current[0];
+			if(that1.playing == null) that1.stopPlaying(); else if(current == null) that1.stop(); else if(that1.tune.tickToMs(currentMessage[0]) < location) {
+				currentTrack.putMidi(currentMessage[1],currentMessage[2],currentMessage[3]);
+				index++;
+				r.tick();
+			} else haxe.Timer.delay(r.tick,1);
+		};
+		r.render = function() {
+			if(that1.playing != null) {
+				var s = new Date().getTime();
+				rerender();
+				haxe.Timer.delay(r.render,30);
+			}
+		};
+		r.tick();
+		r.render();
+	}
+	,stopPlaying: function() {
+		Lambda.foreach(this.tune.tracks,function(track) {
+			track.allSoundOff();
+			return true;
+		});
+	}
+	,rec: function(rerender) {
+		this.play(rerender,"recoding");
+	}
+	,send: function(t,m0,m1,m2) {
+		this.recState.send(m0,m1,m2);
+		Lambda.foreach(this.tune.getSelectedTracks(),function(track) {
+			track.putMidi(m0,m1,m2);
+			return true;
+		});
+	}
+	,__class__: org.jinjor.webmidi.Sequencer
 }
 org.jinjor.webmidi.RecState = function() {
 	this.keyCount = 0;
@@ -405,15 +814,15 @@ org.jinjor.webmidi.RecState.prototype = {
 	}
 	,__class__: org.jinjor.webmidi.RecState
 }
-org.jinjor.webmidi.Track = function(arg) {
-	console.log(arg);
+org.jinjor.webmidi.Track = function(name,synth,channel,program,messages) {
 	this.id = org.jinjor.webmidi.Track.createTrackId();
-	this.name = arg.name;
-	this.synth = arg.synth;
-	this.channel = arg.channel != null?arg.channel:1;
-	this.program = arg.program != null?this.synth.programs[arg.program.number]:this.synth.programs[1];
+	this.name = name;
+	this.synth = synth;
+	this.channel = channel != null?channel:1;
+	this.program = program != null?this.synth.programs[program.number]:this.synth.programs[1];
+	if(this.program == null) this.program = this.synth.programs[1];
 	this.selected = true;
-	this.messages = arg.messages != null?arg.messages:[[Math.floor(40.),128,62,0]];
+	this.messages = messages != null?messages:[[Math.floor(40.),128,62,0]];
 	this.programChange(this.program.number);
 };
 org.jinjor.webmidi.Track.__name__ = true;
@@ -451,6 +860,80 @@ org.jinjor.webmidi.Track.prototype = {
 	}
 	,__class__: org.jinjor.webmidi.Track
 }
+org.jinjor.webmidi.Tune = function() {
+	this.format = 1;
+	this.timeMode = 480;
+	this.tracks = [];
+	this.selectedTrackId = -1;
+	this.pxPerMsMode = 0;
+};
+org.jinjor.webmidi.Tune.__name__ = true;
+org.jinjor.webmidi.Tune.prototype = {
+	getTimePerTick: function() {
+		var tempo = 120;
+		return 60000 / (this.timeMode * tempo);
+	}
+	,msToTick: function(ms) {
+		return Math.floor(ms / this.getTimePerTick());
+	}
+	,tickToMs: function(tick) {
+		return Math.floor(this.getTimePerTick() * tick);
+	}
+	,trackIsSelected: function(track) {
+		return track.id == this.selectedTrackId;
+	}
+	,getSelectedTracks: function() {
+		var that = this;
+		return Lambda.array(Lambda.filter(this.tracks,function(track) {
+			return that.trackIsSelected(track);
+		}));
+	}
+	,replaceTracksByLoadedTracks: function(tracks,synths) {
+		var that = this;
+		this.tracks = tracks != null?Lambda.array(Lambda.map(tracks,function(_track) {
+			return new org.jinjor.webmidi.Track(_track.name,synths[_track.synth.name],_track.channel,_track.program,_track.messages.filter(function(e) {
+				return e.message == null && e.time == null;
+			}));
+		})):[];
+	}
+	,addTrack: function(synth,channel) {
+		var track = new org.jinjor.webmidi.Track("_",synth,channel,null,null);
+		this.tracks.push(track);
+	}
+	,gainPxPerMs: function(amount) {
+		var pxPerMsMode = this.pxPerMsMode + amount;
+		this.pxPerMsMode = pxPerMsMode < 0?0:pxPerMsMode >= org.jinjor.webmidi.Tune.pxPerMsModes.length?org.jinjor.webmidi.Tune.pxPerMsModes.length - 1:pxPerMsMode;
+	}
+	,hasMinPxPerMs: function() {
+		return this.pxPerMsMode <= 0;
+	}
+	,hasMaxPxPerMs: function() {
+		return this.pxPerMsMode >= org.jinjor.webmidi.Tune.pxPerMsModes.length - 1;
+	}
+	,getPxPerMs: function() {
+		return org.jinjor.webmidi.Tune.pxPerMsModes[this.pxPerMsMode];
+	}
+	,refresh: function(smfData,synth) {
+		if(smfData.format != 1) throw "まだ1しか受け付けません";
+		if(smfData.timeMode > 32768) throw "まだMSB=0しか受け付けません";
+		this.format = smfData.format;
+		this.timeMode = smfData.timeMode;
+		haxe.Log.trace("timeMode=" + this.timeMode,{ fileName : "Tune.hx", lineNumber : 135, className : "org.jinjor.webmidi.Tune", methodName : "refresh"});
+		var that = this;
+		this.tracks = smfData.tracks.map(function(events) {
+			var deltaSum = 0;
+			var messages = events.map(function(e) {
+				deltaSum += e[0];
+				return [deltaSum,e[1],e[2],e[3]];
+			});
+			return new org.jinjor.webmidi.Track("_",synth,1,null,messages);
+		});
+	}
+	,__class__: org.jinjor.webmidi.Tune
+}
+function $iterator(o) { if( o instanceof Array ) return function() { return HxOverrides.iter(o); }; return typeof(o.iterator) == 'function' ? $bind(o,o.iterator) : o.iterator; };
+var $_;
+function $bind(o,m) { var f = function(){ return f.method.apply(f.scope, arguments); }; f.scope = o; f.method = m; return f; };
 if(Array.prototype.indexOf) HxOverrides.remove = function(a,o) {
 	var i = a.indexOf(o);
 	if(i == -1) return false;
@@ -495,6 +978,9 @@ org.jinjor.synth.SynthDef.GMPlayer = new org.jinjor.synth.SynthDef("GMPlayer","h
 org.jinjor.synth.SynthDef.WebBeeper = new org.jinjor.synth.SynthDef("WebBeeper","http://www.g200kg.com/en/docs/webbeeper/","g200kg",{ '1' : { number : 1, description : ""}, '2' : { number : 2, description : ""}, '3' : { number : 3, description : ""}, '4' : { number : 4, description : ""}, '5' : { number : 5, description : ""}, '6' : { number : 6, description : ""}, '7' : { number : 7, description : ""}, '8' : { number : 8, description : ""}, '9' : { number : 9, description : ""}, '10' : { number : 10, description : ""}});
 org.jinjor.synth.SynthDef.synthDefs = [org.jinjor.synth.SynthDef.GMPlayer,org.jinjor.synth.SynthDef.WebBeeper];
 org.jinjor.webmidi.Track.trackId = 0;
+org.jinjor.webmidi.Tune.pxPerMsModes = Lambda.array(Lambda.map([1,2,4,8,16,32],function(ratio) {
+	return 1000 / 600000 * ratio;
+}));
 org.jinjor.webmidi.All.main();
 
 //@ sourceMappingURL=webmidi.js.map

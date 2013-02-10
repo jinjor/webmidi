@@ -12,8 +12,10 @@
   
   <link rel="stylesheet" type="text/css" href="/css/base.css"/>
   <script type="text/javascript">
-    var RecState = org.jinjor.webmidi.RecState;
-    var Track = org.jinjor.webmidi.Track;
+  var RecState = org.jinjor.webmidi.RecState;
+  var Track = org.jinjor.webmidi.Track;
+  var Tune = org.jinjor.webmidi.Tune;
+  var Sequencer = org.jinjor.webmidi.Sequencer;
 
   var module = angular.module('brouserSynth', []);
   JazzPlugin.attachTo(module);
@@ -54,141 +56,8 @@
     };
     return Synth;
   });
-  
-  var Tune = function(){//容量と互換性の都合でSMF形式に準拠する
-    this.format = 1;
-    this.timeMode = 480;
-    this.tracks = [];
-    this.selectedTrackId = -1;
-    this.pxPerMsMode = 0;//1倍
-  };
-  Tune.prototype.readyToRender = function(){
-    var that = this;
-    var rerenders = [];
-    _(this.tracks).each(function(track){
-      var frame = document.getElementById('pianoroll_summary.' + track.id);
-      var canvas1 = document.getElementById('' + track.id + ".1");
-      var canvas2 = document.getElementById('' + track.id + ".2");
-      var ctx1 = canvas1.getContext('2d');
-      var ctx2 = canvas2.getContext('2d');
-      
-      ctx1.fillStyle = "#4444ff";
-      ctx1.beginPath();
-      ctx2.fillStyle = "#7777ff";
-      ctx2.beginPath();
-      
-      rerenders.push(function(recState, pxPerMs){
-        if(recState){
-          ctx2.clearRect(0,0, canvas2.width, canvas2.height);
-          ctx2.fillRect(recState.getLocation() * pxPerMs, 0, 1, 127);
-        }else{
-          ctx2.clearRect(0,0, canvas2.width, canvas2.height);
-          ctx1.clearRect(0,0, canvas1.width, canvas1.height);
-          _(track.messages).each(function(message){
-            var x1 = that.tickToMs(message[0]) * pxPerMs;
-            var y1 = (127 - message[2]);
-            ctx1.fillRect(x1, y1, 2, 2);
-          });
-        }
-      });
-    });
-    this.rerenderTracks = function(recState){
-      var pxPerMs = that.getPxPerMs();
-      _(rerenders).each(function(rerender){
-        rerender(recState, pxPerMs);
-      });
-    };
-  };
-  Tune.prototype.pxPerMsModes = _([1,2,4,8,16,32]).map(function(ratio){
-    return 1000 / (10*60*1000) * ratio;
-  });
-  Tune.prototype.refresh = function(smfData, synth){
-    if(smfData.format != 1){
-      throw 'まだ1しか受け付けません'
-    }
-    if(smfData.timeMode > 128*256){
-      throw 'まだMSB=0しか受け付けません'
-    }
-    this.format = smfData.format;
-    this.timeMode = smfData.timeMode;
-    console.log("timeMode=" + this.timeMode);
-    var that = this;
-    this.tracks = _(smfData.tracks).map(function(events){
-      var deltaSum = 0;
-      var messages = _(events).map(function(e){
-        deltaSum += e[0];
-        return [deltaSum, e[1], e[2], e[3]];
-      });
-      return new Track({
-        name: '_',
-        synth: synth,
-        channel: 1,
-        messages: messages
-      });
-    });
-  };
-  Tune.prototype.getPxPerMs = function(){
-    return this.pxPerMsModes[this.pxPerMsMode];
-  };
-  Tune.prototype.hasMaxPxPerMs = function(){
-    return this.pxPerMsMode >= this.pxPerMsModes.length-1;
-  };
-  Tune.prototype.hasMinPxPerMs = function(){
-    return this.pxPerMsMode <= 0;
-  };
-  Tune.prototype.gainPxPerMs = function(amount){
-    var pxPerMsMode = this.pxPerMsMode + amount;
-    this.pxPerMsMode = (pxPerMsMode < 0) ? 0 : ((pxPerMsMode >= this.pxPerMsModes.length) ? this.pxPerMsModes.length-1 : pxPerMsMode);
-    this.rerenderTracks();
-  };
-  Tune.prototype.addTrack = function(synth, channel){
-    var track = new Track({
-        name: '_',
-        synth: synth,
-        channel: channel
-    });
-    this.tracks.push(track);//とりあえず1trackに
-  };
-  Tune.prototype.replaceTracksByLoadedTracks = function(tracks, synths){
-    var that = this;
-    this.tracks = tracks ? _(tracks).map(function(_track){
-      _track.synth = synths[_track.synth.name];
-      _track.messages = _(_track.messages).filter(function(e){//下位互換
-        return (e.message || e.time) ? false : true;
-      });
-      return new Track(_track, function(track, recState){
-        that.rerenderTrack(track, recState);
-      });
-    }) : [];
-  };
-  Tune.prototype.foreachTrack = function(f){
-    _(this.tracks).each(function(track){
-      f(track);
-    });
-  };
-  Tune.prototype.foreachSelectedTrack = function(f){
-    var that = this;
-    this.foreachTrack(function(track){
-      that.trackIsSelected(track) && f(track);
-    });
-  };
-  Tune.prototype.trackIsSelected = function(track){
-    return track.id == this.selectedTrackId;
-  };
-  Tune.prototype.tickToMs = function(tick){
-    return Math.floor(this.getTimePerTick() * tick);
-  };
-  Tune.prototype.getTimePerTick = function(){
-    var tempo = 120;//TODO
-    return 1000*60/(this.timeMode * tempo);
-  };
-  Tune.prototype.msToTick = function(ms){
-    return Math.floor(ms / this.getTimePerTick());
-  };
-  
+
   function KeyboardCtrl($scope, $http, Synth, jazz) {
-  
-  
 
     $scope.address = location.href.split('/tunes/', 2)[1];
     document.title = $scope.address + " - WebMidiLink Sample";
@@ -200,100 +69,7 @@
       $scope.user = user;
     });
     
-    var Sequencer = function(tune){
-      this.location = 0;
-      this.tune = tune;
-      this.playing = false;
-      this.recState = new RecState();
-    };
     
-    Sequencer.prototype.send = function(t, m0, m1, m2){
-      this.recState.send(m0, m1, m2);
-      this.tune.foreachSelectedTrack(function(track){
-        track.putMidi(m0, m1, m2);
-      });
-      //this.tune.rerenderSelectedTracks();
-    };
-    Sequencer.prototype.rec = function(){
-      this.play('recoding');
-    };
-    Sequencer.prototype.stopPlaying = function(){
-      this.tune.foreachTrack(function(track){
-        track.allSoundOff();
-      });
-    };
-    Sequencer.prototype.play = function(optMode){
-      if(this.tune.tracks.length <= 0){
-        return;
-      }
-      var that = this;
-      this.recState = new RecState();
-      if(optMode == 'recoding'){
-        this.recState.onNoteFinished = function(note, velocity, startTime, endTime){
-          that.tune.foreachSelectedTrack(function(track){
-            track.recNote(note, velocity, that.tune.msToTick(startTime), that.tune.msToTick(endTime));
-          });
-        };
-        this.recState.onElse = function(time, m0, m1, m2){
-          that.tune.foreachSelectedTrack(function(track){
-            track.recElse(that.tune.msToTick(time),m0, m1, m2);
-          });
-        };
-      }
-      var messageTrackPairs = _(this.tune.tracks).reduce(function(memo, track){
-        var pairs = _(track.messages).map(function(mes){ return [mes, track] });
-        return memo.concat(pairs);
-      }, []);
-      
-      this.playing = optMode || 'playing';
-      messageTrackPairs.sort(function(a, b){
-        return a[0][0] - b[0][0];
-      });
-      //console.log(messageTrackPairs);
-      that.tune.foreachTrack(function(track){
-        track.programChange();//synthロード後にダメ押し
-      });
-      var index = 0;
-      var current;
-      var currentTrack;
-      var currentMessage;
-      var that = this;
-      var tick = function(){
-        var location = that.recState.getLocation();
-        current = (index < messageTrackPairs.length) ? messageTrackPairs[index] : null;
-        currentTrack = current[1];
-        currentMessage = current[0];
-        if(!that.playing){
-          that.stopPlaying();//念のため
-        }else if(!current){
-          that.stop();
-          $scope.$apply();
-        }else if(that.tune.tickToMs(currentMessage[0]) < location){
-          currentTrack.putMidi(currentMessage[1], currentMessage[2], currentMessage[3]);
-          index++;
-          tick();
-        }else{
-          setTimeout(tick, 1);
-        }
-      };
-      var render = function(){
-        if(that.playing){
-          var s = new Date().getTime();
-          that.tune.rerenderTracks(that.recState);
-          setTimeout(render, 30);
-        }
-      };
-      tick();
-      render();
-    };
-    Sequencer.prototype.stop = function(){
-      console.log("stop");
-      $scope.recState = null;
-      this.location = 0;
-      this.playing = null;
-      this.stopPlaying();
-    };
-
     $scope.synths = {};
     _(org.jinjor.synth.SynthDef.synthDefs).each(function(synthDef){
       $scope.synths[synthDef.name] = new Synth(synthDef.name, synthDef.url, synthDef.author, synthDef.programs);
@@ -304,6 +80,45 @@
     
     $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
     $scope.tune = new Tune();
+    
+    
+    $scope.rerenderTracks;
+    
+    var readyToRender = function(){
+      var rerenders = _($scope.tune.tracks).map(function(track){
+        var frame = document.getElementById('pianoroll_summary.' + track.id);
+        var canvas1 = document.getElementById('' + track.id + ".1");
+        var canvas2 = document.getElementById('' + track.id + ".2");
+        var ctx1 = canvas1.getContext('2d');
+        var ctx2 = canvas2.getContext('2d');
+        
+        ctx1.fillStyle = "#4444ff";
+        ctx1.beginPath();
+        ctx2.fillStyle = "#7777ff";
+        ctx2.beginPath();
+        
+        return function(recState, pxPerMs){
+          if(recState){
+            ctx2.clearRect(0,0, canvas2.width, canvas2.height);
+            ctx2.fillRect(recState.getLocation() * pxPerMs, 0, 1, 127);
+          }else{
+            ctx2.clearRect(0,0, canvas2.width, canvas2.height);
+            ctx1.clearRect(0,0, canvas1.width, canvas1.height);
+            _(track.messages).each(function(message){
+              var x1 = $scope.tune.tickToMs(message[0]) * pxPerMs;
+              var y1 = (127 - message[2]);
+              ctx1.fillRect(x1, y1, 2, 2);
+            });
+          }
+        };
+      });
+      $scope.rerenderTracks = function(){
+        var pxPerMs = $scope.tune.getPxPerMs();
+        _(rerenders).each(function(rerender){
+          rerender($scope.sequencer.recState, pxPerMs);
+        });
+      };
+    };
     
     $scope.saveContents = function(){
       _($scope.tune.tracks).each(function(track){
@@ -335,15 +150,6 @@
               $scope.sequencer.recState.keyIsPressed()) ? 'pressed' : '';
     };
     $scope.playing = false;
-    $scope.rec = function(){
-      $scope.sequencer.rec();
-    };
-    $scope.play = function(){
-      $scope.sequencer.play();
-    };
-    $scope.stop = function(){
-      $scope.sequencer.stop();
-    };
     
     jazz.onMessage(function(t, m0, m1, m2){
       if(m0 == 248){
@@ -364,8 +170,8 @@
           synth.load(document[synth.id]);
         });
         setTimeout(function(){
-          $scope.tune.readyToRender();
-          $scope.tune.rerenderTracks();
+          readyToRender();
+          $scope.rerenderTracks();
         },0);
       }).error(function(e) {
         alert(e);
@@ -389,8 +195,8 @@
               $scope.tune.refresh(smfFile.smfData, $scope.synths.GMPlayer);
               $scope.$apply();
               setTimeout(function(){
-                $scope.tune.readyToRender();
-                $scope.tune.rerenderTracks();
+                readyToRender();
+                $scope.rerenderTracks();
               },0);
             });
             event.preventDefault();
@@ -435,9 +241,9 @@
   <button ng-repeat="synth in synths" ng-click="tune.addTrack(synth, 1)">{{synth.name}}</button>
   
   <div>
-    <button ng-click="rec()" ng-disabled="sequencer.playing">●Rec</button>
-    <button ng-click="play()" ng-disabled="sequencer.playing">Play</button>
-    <button ng-click="stop()" ng-disabled="!sequencer.playing">Stop</button>
+    <button ng-click="sequencer.rec(rerenderTracks)" ng-disabled="sequencer.playing">●Rec</button>
+    <button ng-click="sequencer.play(rerenderTracks)" ng-disabled="sequencer.playing">Play</button>
+    <button ng-click="sequencer.stop()" ng-disabled="!sequencer.playing">Stop</button>
   </div>
   <div>
     <button ng-click="tune.gainPxPerMs(-1)" ng-disabled="tune.hasMinPxPerMs()">-</button>
