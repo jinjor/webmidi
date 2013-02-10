@@ -164,7 +164,7 @@ class Tune {//容量と互換性の都合でSMF形式に準拠する
   }
   public function replaceTracksByLoadedTracks(tracks : Array<Dynamic>, synths){
     var that = this;
-    this.tracks = (tracks.mapO(function(_track){
+    this.tracks = if(tracks != null) tracks.map(function(_track){
       return new Track(
         _track.name,
         synths[_track.synth.name],
@@ -173,7 +173,7 @@ class Tune {//容量と互換性の都合でSMF形式に準拠する
         _track.messages.filter(function(e){//下位互換
           return (e.message == null && e.time == null);
         }));
-    }).arrayO()).or([]);
+    }).array() else [];
   }
   public function getSelectedTracks() : Array<Track> {
     var that = this;

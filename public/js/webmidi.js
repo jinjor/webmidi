@@ -681,12 +681,6 @@ org.jinjor.util.Util.__name__ = true;
 org.jinjor.util.Util.or = function(a,b) {
 	return a != null?a:b;
 }
-org.jinjor.util.Util.mapO = function(it,f) {
-	return it != null?Lambda.map(it,f):null;
-}
-org.jinjor.util.Util.arrayO = function(it) {
-	return it != null?Lambda.array(it):null;
-}
 if(!org.jinjor.webmidi) org.jinjor.webmidi = {}
 org.jinjor.webmidi.All = function() { }
 org.jinjor.webmidi.All.__name__ = true;
@@ -895,11 +889,11 @@ org.jinjor.webmidi.Tune.prototype = {
 	}
 	,replaceTracksByLoadedTracks: function(tracks,synths) {
 		var that = this;
-		this.tracks = org.jinjor.util.Util.or(org.jinjor.util.Util.arrayO(org.jinjor.util.Util.mapO(tracks,function(_track) {
+		this.tracks = tracks != null?Lambda.array(Lambda.map(tracks,function(_track) {
 			return new org.jinjor.webmidi.Track(_track.name,synths[_track.synth.name],_track.channel,_track.program,_track.messages.filter(function(e) {
 				return e.message == null && e.time == null;
 			}));
-		})),[]);
+		})):[];
 	}
 	,addTrack: function(synth,channel) {
 		var track = new org.jinjor.webmidi.Track("_",synth,channel,null,null);
