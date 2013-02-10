@@ -161,7 +161,6 @@
         if(recState){
           ctx2.clearRect(0,0, canvas2.width, canvas2.height);
           ctx2.fillRect(recState.getLocation() * pxPerMs, 0, 1, 127);
-          ctx2.clearRect(frame.offsetWidth, 0, canvas2.width, canvas2.height);
         }else{
           ctx2.clearRect(0,0, canvas2.width, canvas2.height);
           ctx1.clearRect(0,0, canvas1.width, canvas1.height);
@@ -170,7 +169,6 @@
             var y1 = (127 - message[2]);
             ctx1.fillRect(x1, y1, 2, 2);
           });
-          ctx1.clearRect(frame.offsetWidth, 0, canvas1.width, canvas1.height);
         }
       });
     });
