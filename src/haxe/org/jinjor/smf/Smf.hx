@@ -55,9 +55,9 @@ class SmfData {
 
       var end = p + dataLength;
       
-      var events = [];
+      var events : Array<Array<Int>> = [];
 
-      var event = [];
+      var event : Array<Int> = [];
       var prevEventFirst = null;
       while(p < end){
         var delta_incr = getVariableLength(buf, p);
@@ -92,14 +92,14 @@ class SmfData {
         }else if(eventFirst < 0xf0){//MidiEventまたはランニングステータス（MidiEventのみ）
           var firstData = null;
           if(eventFirst < 0x80){//running status
-            var firstData = event.pop();
+            firstData = event.pop();
             if(prevEventFirst != null && (prevEventFirst < 0x80 || 0xf0 <= prevEventFirst)){
               throw '予期しないランニングステータス: ' + prevEventFirst;//一応
             }
             eventFirst = prevEventFirst;
             event.push(eventFirst);
           }else{
-            var firstData = buf[p++];
+            firstData = buf[p++];
           }
           if(eventFirst >= 0xc0){
             event.push(firstData);

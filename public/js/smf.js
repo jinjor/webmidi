@@ -308,13 +308,11 @@ org.jinjor.smf.SmfData = function(data) {
 			} else if(eventFirst < 240) {
 				var firstData = null;
 				if(eventFirst < 128) {
-					var firstData1 = event1.pop();
+					firstData = event1.pop();
 					if(prevEventFirst != null && (prevEventFirst < 128 || 240 <= prevEventFirst)) throw "予期しないランニングステータス: " + prevEventFirst;
 					eventFirst = prevEventFirst;
 					event1.push(eventFirst);
-				} else {
-					var firstData1 = buf[p++];
-				}
+				} else firstData = buf[p++];
 				if(eventFirst >= 192) event1.push(firstData); else {
 					event1.push(firstData);
 					event1.push(buf[p++]);
