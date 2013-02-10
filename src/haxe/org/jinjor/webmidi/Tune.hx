@@ -67,10 +67,8 @@ class Track {
     this.name = name;
     this.synth = synth;
     this.channel = channel.or(1);
-    this.program = if(program != null) this.synth.programs[program.number] else this.synth.programs[1];
-    if(this.program == null){
-      this.program = this.synth.programs[1];//緊急対応
-    }
+    this.program = if(program != null) this.synth.programs[program.number].or(this.synth.programs[1])
+                    else this.synth.programs[1];
     this.selected = true;
     this.messages = messages.or([[Math.floor(1000*60*10/(1000*60/480*120)), 0x80, 62, 0]]);
     this.programChange(this.program.number);

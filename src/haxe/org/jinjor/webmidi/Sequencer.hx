@@ -4,6 +4,7 @@ import org.jinjor.webmidi.Tune;
 import haxe.Timer;
 import js.Lib;
 using Lambda;
+using org.jinjor.util.Util;
 
 class Sequencer{
   public var location : Int;
@@ -59,7 +60,7 @@ class Sequencer{
       return memo.concat(pairs);
     }, []);
     
-    this.playing = if(optMode != null) optMode else 'playing';
+    this.playing = optMode.or('playing');
     messageTrackPairs.sort(function(a, b){
       return a[0][0] - b[0][0];
     });
