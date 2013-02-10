@@ -253,10 +253,6 @@ js.Lib.setErrorHandler = function(f) {
 var org = org || {}
 if(!org.jinjor) org.jinjor = {}
 if(!org.jinjor.smf) org.jinjor.smf = {}
-org.jinjor.smf.Smf = function() { }
-org.jinjor.smf.Smf.__name__ = true;
-org.jinjor.smf.Smf.main = function() {
-}
 org.jinjor.smf.SmfData = function(data) {
 	var buf = eval("new Uint8Array(data)");
 	var p = 0;
@@ -368,6 +364,93 @@ org.jinjor.synth.SynthDef.__name__ = true;
 org.jinjor.synth.SynthDef.prototype = {
 	__class__: org.jinjor.synth.SynthDef
 }
+if(!org.jinjor.webmidi) org.jinjor.webmidi = {}
+org.jinjor.webmidi.All = function() { }
+org.jinjor.webmidi.All.__name__ = true;
+org.jinjor.webmidi.All.main = function() {
+}
+org.jinjor.webmidi.RecState = function() {
+	this.keyCount = 0;
+	this.noteOns = [];
+	this.running = false;
+	this.startTime = Math.floor(new Date().getTime());
+};
+org.jinjor.webmidi.RecState.__name__ = true;
+org.jinjor.webmidi.RecState.prototype = {
+	getLocation: function() {
+		return Math.floor(new Date().getTime()) - this.startTime;
+	}
+	,keyIsPressed: function() {
+		return this.keyCount > 0;
+	}
+	,reset: function() {
+		this.keyCount = 0;
+		this.noteOns = [];
+	}
+	,send: function(m0,m1,m2) {
+		var time = this.getLocation();
+		if(m0 >> 4 == 9) {
+			this.noteOns[m1] = [time,m2];
+			this.keyCount++;
+		} else if(m0 >> 4 == 8) {
+			var startTime_velocity = this.noteOns[m1];
+			if(startTime_velocity != null) this.onNoteFinished(m1,startTime_velocity[1],startTime_velocity[0],time);
+			this.noteOns[m1] = false;
+			this.keyCount--;
+		} else this.onElse(time,m0,m1,m2);
+	}
+	,onElse: function(time,m0,m1,m2) {
+	}
+	,onNoteFinished: function(startTime,endTime,velocity,time) {
+	}
+	,__class__: org.jinjor.webmidi.RecState
+}
+org.jinjor.webmidi.Track = function(arg) {
+	console.log(arg);
+	this.id = org.jinjor.webmidi.Track.createTrackId();
+	this.name = arg.name;
+	this.synth = arg.synth;
+	this.channel = arg.channel != null?arg.channel:1;
+	this.program = arg.program != null?this.synth.programs[arg.program.number]:this.synth.programs[1];
+	this.selected = true;
+	this.messages = arg.messages != null?arg.messages:[[Math.floor(40.),128,62,0]];
+	this.programChange(this.program.number);
+};
+org.jinjor.webmidi.Track.__name__ = true;
+org.jinjor.webmidi.Track.createTrackId = function() {
+	return ++org.jinjor.webmidi.Track.trackId;
+}
+org.jinjor.webmidi.Track.prototype = {
+	onChangeSynth: function() {
+		this.program = this.synth.programs[1];
+	}
+	,deleteAll: function() {
+		this.messages = [[Math.floor(40.),128,62,0]];
+	}
+	,putMidi: function(m0,m1,m2) {
+		this.synth.sendMidiMessage(m0 + this.channel - 1,m1,m2);
+	}
+	,allSoundOff: function() {
+		this.synth.allSoundOff();
+	}
+	,programChange: function(number) {
+		this.putMidi(192,number != null?number:this.program.number,0);
+	}
+	,noteOff: function(note) {
+		this.putMidi(128,note,0);
+	}
+	,noteOn: function(note,velo) {
+		this.putMidi(144,note,velo);
+	}
+	,recElse: function(time,m0,m1,m2) {
+		this.messages.push([time,m0,m1,m2]);
+	}
+	,recNote: function(note,velocity,startTime,endTime) {
+		this.messages.push([startTime,144,note,velocity]);
+		this.messages.push([endTime,128,note,0]);
+	}
+	,__class__: org.jinjor.webmidi.Track
+}
 if(Array.prototype.indexOf) HxOverrides.remove = function(a,o) {
 	var i = a.indexOf(o);
 	if(i == -1) return false;
@@ -411,4 +494,7 @@ if(typeof window != "undefined") {
 org.jinjor.synth.SynthDef.GMPlayer = new org.jinjor.synth.SynthDef("GMPlayer","http://www.g200kg.com/en/docs/gmplayer/","g200kg",{ '1' : { number : 1, description : ""}, '2' : { number : 2, description : ""}, '3' : { number : 3, description : ""}, '4' : { number : 4, description : ""}, '5' : { number : 5, description : ""}, '6' : { number : 6, description : ""}, '7' : { number : 7, description : ""}, '8' : { number : 8, description : ""}, '9' : { number : 9, description : ""}, '10' : { number : 10, description : ""}});
 org.jinjor.synth.SynthDef.WebBeeper = new org.jinjor.synth.SynthDef("WebBeeper","http://www.g200kg.com/en/docs/webbeeper/","g200kg",{ '1' : { number : 1, description : ""}, '2' : { number : 2, description : ""}, '3' : { number : 3, description : ""}, '4' : { number : 4, description : ""}, '5' : { number : 5, description : ""}, '6' : { number : 6, description : ""}, '7' : { number : 7, description : ""}, '8' : { number : 8, description : ""}, '9' : { number : 9, description : ""}, '10' : { number : 10, description : ""}});
 org.jinjor.synth.SynthDef.synthDefs = [org.jinjor.synth.SynthDef.GMPlayer,org.jinjor.synth.SynthDef.WebBeeper];
-org.jinjor.smf.Smf.main();
+org.jinjor.webmidi.Track.trackId = 0;
+org.jinjor.webmidi.All.main();
+
+//@ sourceMappingURL=webmidi.js.map

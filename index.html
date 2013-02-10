@@ -12,6 +12,8 @@
   
   <link rel="stylesheet" type="text/css" href="/css/base.css"/>
   <script type="text/javascript">
+    var RecState = org.jinjor.webmidi.RecState;
+    var Track = org.jinjor.webmidi.Track;
 
   var module = angular.module('brouserSynth', []);
   JazzPlugin.attachTo(module);
@@ -52,87 +54,6 @@
     };
     return Synth;
   });
-
-  
-  var RecState = function() {
-    this.keyCount = 0;
-    this.noteOns = [];
-    this.running = false;
-    this.startTime = (new Date()).getTime();
-  };
-  RecState.prototype.onNoteFinished = function(startTime, endTime, velocity){};
-  RecState.prototype.onElse = function(time, m0, m1, m2){};
-  RecState.prototype.send = function(m0, m1, m2){
-    var time = this.getLocation();
-    if(m0 >> 4 == 9){
-      this.noteOns[m1] = [time, m2];
-      this.keyCount++;
-    }else if(m0 >> 4 == 8){
-      var startTime_velocity = this.noteOns[m1];
-      startTime_velocity && this.onNoteFinished(m1, startTime_velocity[1], startTime_velocity[0], time);
-      this.noteOns[m1] = false;
-      this.keyCount--;
-    }else{
-      this.onElse(time, m0, m1, m2);
-    }
-  };
-  RecState.prototype.reset = function(){
-    this.keyCount = 0;
-    this.noteOns = [];
-  };
-  RecState.prototype.keyIsPressed = function(){
-    return this.keyCount > 0;
-  };
-  RecState.prototype.getLocation = function(){
-    return (new Date()).getTime() - this.startTime;
-  };
-  
-  
-  var trackId = 0;
-  function createTrackId(){
-    return ++trackId;
-  };
-  
-  var Track = function(arg){
-    console.log(arg)
-    this.id = createTrackId();
-    this.name = arg.name;
-    this.synth = arg.synth;
-    this.channel = arg.channel || 1;
-    this.program = arg.program ? this.synth.programs[arg.program.number] : this.synth.programs[1];
-    this.selected = true;
-    this.messages = arg.messages || [1000*60*10/(1000*60/480*120), 0x80, 62, 0];
-    this.programChange(this.program.number);
-  };
-  Track.prototype.recNote = function(note, velocity, startTime, endTime){
-    this.messages.push([startTime, 0x90, note, velocity]);
-    this.messages.push([endTime, 0x80, note, 0]);
-  };
-  Track.prototype.recElse = function(time, m0, m1, m2){
-    this.messages.push([time, m0, m1, m2]);
-  };
-  Track.prototype.noteOn = function(note, velo) {
-    this.putMidi(0x90, note, velo);
-  };
-  Track.prototype.noteOff = function(note) {
-    this.putMidi(0x80, note, 0);
-  };
-  Track.prototype.programChange = function(number) {
-    this.putMidi(0xc0, number || this.program.number, 0);
-  };
-  Track.prototype.allSoundOff = function() {
-    this.synth.allSoundOff();
-  };
-  Track.prototype.putMidi = function(m0, m1, m2){
-    this.synth.sendMidiMessage(m0 + this.channel - 1, m1, m2);//キーボードからはchannel1で来る前提
-  };
-  Track.prototype.deleteAll = function(){
-    this.messages = [1000*60*10/(1000*60/480*120), 0x80, 62, 0];
-  };
-  Track.prototype.onChangeSynth = function(){
-    this.program = this.synth.programs[1];
-  };
-  
   
   var Tune = function(){//容量と互換性の都合でSMF形式に準拠する
     this.format = 1;
@@ -266,6 +187,8 @@
   };
   
   function KeyboardCtrl($scope, $http, Synth, jazz) {
+  
+  
 
     $scope.address = location.href.split('/tunes/', 2)[1];
     document.title = $scope.address + " - WebMidiLink Sample";
