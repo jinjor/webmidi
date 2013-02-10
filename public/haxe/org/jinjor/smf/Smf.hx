@@ -2,9 +2,8 @@ package org.jinjor.smf;
 
 import js.Lib;
 
-class SMF2 {
+class Smf {
     static function main() {
-        trace("Hello World !");
     }
 }
 class SmfData {
@@ -119,7 +118,7 @@ class SmfData {
   }
 }
 
-class SMF3 {
+class SmfFile {
   public var name : String;
   public var type : String;
   public var size : Int;
