@@ -437,8 +437,6 @@
     });
     
     $(document).ready(function(){
-    
-    
       $http({method: 'GET', url: '/contents/' + $scope.address}).success(function(tracks) {
         console.log(tracks);
         $scope.tune.replaceTracksByLoadedTracks(tracks, $scope.synths);
@@ -542,8 +540,10 @@
           </form>
         </div>
         <div id="pianoroll_summary.{{track.id}}" class="pianoroll_summary">
-          <canvas class="layer1" id="{{track.id}}.1" width="1000px" height="128px"></canvas>
-          <canvas class="layer2" id="{{track.id}}.2" width="1000px" height="128px"></canvas>
+          <div class="canvas_container">
+            <canvas class="layer1" id="{{track.id}}.1" width="1000px" height="128px"></canvas>
+            <canvas class="layer2" id="{{track.id}}.2" width="1000px" height="128px"></canvas>
+          </div>
         </div>
       </li>
     </ul>

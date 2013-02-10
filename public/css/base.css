@@ -66,6 +66,10 @@ li {
   background: -moz-linear-gradient(top, #eeeeff, #ccccee);
   background: -webkit-gradient(linear, left top, left bottom, from(#eeeeff), to(#ccccee));
 }
+.canvas_container{
+  padding: 0px 0px 0px 0px;
+  position: relative;
+}
 .pianoroll_summary canvas{
   position: absolute;
 }
