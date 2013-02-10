@@ -8,7 +8,7 @@
   <script type="text/javascript" src="/js/underscore-min.js"></script>
   <script type="text/javascript" src="/js/jazz-plugin-handler.js"></script>
   <script type="text/javascript" src="/js/footerFixed.js"></script>
-  <script type="text/javascript" src="/js/smf.js"></script>
+  <script type="text/javascript" src="/js/smf2.js"></script>
   <script type="text/javascript" src="/js/synthdefs.js"></script>
   
   <link rel="stylesheet" type="text/css" href="/css/base.css"/>
@@ -455,7 +455,7 @@
         synth.load(document[synth.id]);
       });
       
-      var SmfFile = org.jinjor.smf.SmfFile;
+      var SmfFile = org.jinjor.smf.SMF3;
 
       $.event.props.push('dataTransfer');//おまじない
       if (window.File) {
@@ -464,7 +464,7 @@
           }).on("drop", function(event){
             var files = event.dataTransfer.files;
             var f = files[0];
-            var smfFile = new SmfFile(f, function(){
+            var smfFile = new SmfFile(f, new FileReader(), function(){
               $scope.tune.refresh(smfFile.smfData, $scope.synths.GMPlayer);
               $scope.$apply();
               setTimeout(function(){
