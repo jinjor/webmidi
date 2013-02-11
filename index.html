@@ -122,13 +122,13 @@
     };
     $scope.playing = false;
     $scope.play = function(){
-      $scope.sequencer.play(function(sequencer){
-        view.rerenderTracks(sequencer);
+      $scope.sequencer.play(function(){
+        view.rerenderTracks($scope.sequencer);
       });
     }
     $scope.rec = function(){
-      $scope.sequencer.rec(function(sequencer){
-        view.rerenderTracks(sequencer);
+      $scope.sequencer.rec(function(){
+        view.rerenderTracks($scope.sequencer);
       });
     }
     
@@ -155,7 +155,6 @@
           synthMap[synth.id] = synth;
         });
         setTimeout(function(){
-          console.log(view);
           createView().rerenderTracks($scope.sequencer);
         },0);
       }).error(function(e) {

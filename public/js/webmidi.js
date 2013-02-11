@@ -766,7 +766,7 @@ org.jinjor.webmidi.Sequencer.prototype = {
 		r.render = function() {
 			if(that1.playing != null) {
 				var s = new Date().getTime();
-				rerender(that1);
+				rerender();
 				haxe.Timer.delay(r.render,30);
 			}
 		};

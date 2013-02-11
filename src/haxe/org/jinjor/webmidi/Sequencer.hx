@@ -28,7 +28,7 @@ class Sequencer{
       return true;
     });
   }
-  public function rec(rerender : Sequencer -> Void){
+  public function rec(rerender : Void -> Void){
     this.play(rerender, 'recoding');
   }
   public function stopPlaying(){
@@ -43,7 +43,7 @@ class Sequencer{
   public function programChange(track : Track){
     this.sendMidiMessage(track, 0xc0, track.program.number, 0);
   }
-  public function play(rerender : Sequencer -> Void, optMode : String){
+  public function play(rerender : Void -> Void, optMode : String){
     if(this.tune.tracks.length <= 0){
       return;
     }
@@ -103,7 +103,7 @@ class Sequencer{
     r.render = function(){
       if(that.playing != null){
         var s = Date.now().getTime();
-        rerender(that);
+        rerender();
         Timer.delay(r.render, 30);
       }
     };
