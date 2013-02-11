@@ -46,8 +46,8 @@ class Sequencer{
       return true;
     });
   }
-  public function rec(rerender : Void -> Void){
-    this.play(rerender, true);
+  public function rec(rerender : Void -> Void, onStop : Void -> Void){
+    this.play(rerender, onStop, true);
   }
   public function stopPlaying(){
     this.playStatus = PlayStatus.Stop(getLocation());
@@ -62,7 +62,7 @@ class Sequencer{
   public function programChange(track : Track){
     this.sendMidiMessage(track, 0xc0, track.program.number, 0);
   }
-  public function play(rerender : Void -> Void, record : Bool){
+  public function play(rerender : Void -> Void, onStop : Void -> Void, record : Bool){
     if(this.tune.tracks.length <= 0){
       return;
     }
@@ -105,9 +105,13 @@ class Sequencer{
     r.tick = function(){
       var location = getLocation();
       current = if(index < messageTrackPairs.length) messageTrackPairs[index] else null;
+      
+      if(current == null){
+        that.stopPlaying();
+        return;
+      }
       currentTrack = current[1];
       currentMessage = current[0];
-      
       if(switch(that.playStatus){
         case Stop(location) : true;
         case Playing(playState) : false;
@@ -117,6 +121,7 @@ class Sequencer{
       }else if(current == null){
         that.stopPlaying();
       }else if(that.tune.tickToMs(currentMessage[0]) < location){
+        
         sendMidiMessage(currentTrack, currentMessage[1], currentMessage[2], currentMessage[3]);
         index++;
         r.tick();

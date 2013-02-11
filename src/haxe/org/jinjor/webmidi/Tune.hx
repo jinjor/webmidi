@@ -114,7 +114,7 @@ class Tune {//容量と互換性の都合でSMF形式に準拠する
     this.pxPerMsMode = 0;//1倍
   }
   
-  public function refresh(smfData, synth){
+  public function refresh(smfData, synthDef : SynthDef){
     if(smfData.format != 1){
       throw 'まだ1しか受け付けません';
     }
@@ -131,7 +131,7 @@ class Tune {//容量と互換性の都合でSMF形式に準拠する
         deltaSum += e[0];
         return [deltaSum, e[1], e[2], e[3]];
       });
-      return new Track('_', synth, 1, null, messages);
+      return new Track('_', synthDef, 1, null, messages);
     });
   }
   public function getPxPerMs(){
@@ -147,21 +147,19 @@ class Tune {//容量と互換性の都合でSMF形式に準拠する
     var pxPerMsMode = this.pxPerMsMode + amount;
     this.pxPerMsMode = (pxPerMsMode < 0) ? 0 : ((pxPerMsMode >= pxPerMsModes.length) ? pxPerMsModes.length-1 : pxPerMsMode);
   }
-  public function addTrack(synth, channel){
-    var track = new Track('_', synth, channel, null, null);
+  public function addTrack(synthDef : SynthDef, channel){
+    var track = new Track('_', synthDef, channel, null, null);
     this.tracks.push(track);//とりあえず1trackに
   }
-  public function replaceTracksByLoadedTracks(tracks : Array<Dynamic>, synths){
+  public function replaceTracksByLoadedTracks(tracks : Array<Track>, synths){
     var that = this;
     this.tracks = if(tracks != null) tracks.map(function(_track){
       return new Track(
         _track.name,
-        synths[_track.synth.name],
+        _track.synthDef,
         _track.channel,
         _track.program,
-        _track.messages.filter(function(e){//下位互換
-          return (e.message == null && e.time == null);
-        }));
+        _track.messages);
     }).array() else [];
   }
   public function getSelectedTracks() : Array<Track> {

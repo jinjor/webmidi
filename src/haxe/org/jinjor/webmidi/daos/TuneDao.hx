@@ -19,6 +19,7 @@ class AngularTuneDao implements TuneDao {
   }
   
   public function save(tune : Tune, address : String, _callback : Dynamic -> Void){
+    trace(tune.tracks);
     http({method: 'POST', url: '/saveContents', data: {
       address: address,
       contents: Json.stringify(tune.tracks)

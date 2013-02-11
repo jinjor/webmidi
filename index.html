@@ -83,6 +83,7 @@
       } 
     });
     
+    $scope.synthDefs = SynthDef.synthDefs;
     $scope.synths = {};
     _(SynthDef.synthDefs).each(function(synthDef){
       $scope.synths[synthDef.name] = new Synth(synthDef.name, synthDef.url, synthDef.author, synthDef.programs);
@@ -100,7 +101,7 @@
     }
     
     $scope.saveContents = function(){
-      tuneDao.save($scope.sequencer.tune, function(e){
+      tuneDao.save($scope.sequencer.tune, $scope.address, function(e){
         if(e){
           alert(e)
         }else{
@@ -125,11 +126,15 @@
     $scope.play = function(){
       $scope.sequencer.play(function(){
         view.renderLocation();
-      });
+      }),function(){
+        $scope.$apply();
+      };
     };
     $scope.rec = function(){
       $scope.sequencer.rec(function(){
         view.renderLocation();
+      },function(){
+        $scope.$apply();
       });
     };
     $scope.stop = function(){
@@ -156,7 +161,7 @@
         if(e){
           alert(e);
         }else{
-          console.log(tracks);
+          tracks = tracks || [];
           var tune = new Tune();
           tune.replaceTracksByLoadedTracks(tracks, $scope.synths);
           var synthMap = {};
@@ -186,7 +191,7 @@
             var files = event.dataTransfer.files;
             var f = files[0];
             var smfFile = new SmfFile(f, new FileReader(), function(){
-              $scope.sequencer.tune.refresh(smfFile.smfData, $scope.synths.GMPlayer);
+              $scope.sequencer.tune.refresh(smfFile.smfData, SynthDef.GMPlayer);
               $scope.$apply();
               setTimeout(function(){
                 createView().renderAll();
@@ -231,7 +236,7 @@
       </select>
     </p>
   </div>
-  <button ng-repeat="synth in synths" ng-click="sequencer.tune.addTrack(synth, 1)">{{synth.name}}</button>
+  <button ng-repeat="synthDef in synthDefs" ng-click="sequencer.tune.addTrack(synthDef, 1)">{{synthDef.name}}</button>
   
   <div>
     <button ng-click="rec()" ng-disabled="sequencer.isPlaying()">●Rec</button>
@@ -248,8 +253,7 @@
         <div class="track_def">
           <!--<label>{{$index + 1}}</label>-->
           <span class="keyboard {{keyIsPressed(track)}}">■</span> <!--{{track.name}} : {{track.synth.name}}-->
-                                                                    
-          <select ng-model="track.synthDef" ng-change="track.onChangeSynth()" ng-options="synth.name for synth in synthsAsArray()"></select>
+          <select ng-model="track.synthDef" ng-change="track.onChangeSynth()" ng-options="synthDef.name for synthDef in synthDefs"></select>
           <label>Ch:</label><select ng-model="track.channel" ng-disabled="false" ng-options="channel for channel in channels"></select>
           <label>Prg:</label><select ng-model="track.program" ng-change="sequencer.programChange(track)" ng-options="(program.number + ':' + program.description) for program in sequencer.getSynth(track.synthDef).programsAsArray()"></select>
           <!--<input type="checkbox" ng-model="track.rec">-->

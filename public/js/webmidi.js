@@ -1454,7 +1454,7 @@ org.jinjor.webmidi.Sequencer.prototype = {
 	gainPxPerMs: function(amount) {
 		this.tune.gainPxPerMs(amount);
 	}
-	,play: function(rerender,record) {
+	,play: function(rerender,onStop,record) {
 		var _g = this;
 		if(this.tune.tracks.length <= 0) return;
 		var that = this;
@@ -1491,6 +1491,10 @@ org.jinjor.webmidi.Sequencer.prototype = {
 		r.tick = function() {
 			var location = _g.getLocation();
 			current = index < messageTrackPairs.length?messageTrackPairs[index]:null;
+			if(current == null) {
+				that1.stopPlaying();
+				return;
+			}
 			currentTrack = current[1];
 			currentMessage = current[0];
 			if((function($this) {
@@ -1537,7 +1541,7 @@ org.jinjor.webmidi.Sequencer.prototype = {
 					break;
 				}
 				return $r;
-			}(this))) haxe.Timer.delay(r.render,30);
+			}(this))) haxe.Timer.delay(r.render,50);
 		};
 		r.tick();
 		r.render();
@@ -1556,8 +1560,8 @@ org.jinjor.webmidi.Sequencer.prototype = {
 			return true;
 		});
 	}
-	,rec: function(rerender) {
-		this.play(rerender,true);
+	,rec: function(rerender,onStop) {
+		this.play(rerender,onStop,true);
 	}
 	,send: function(t,m0,m1,m2) {
 		var _g = this;
@@ -1741,13 +1745,11 @@ org.jinjor.webmidi.Tune.prototype = {
 	,replaceTracksByLoadedTracks: function(tracks,synths) {
 		var that = this;
 		this.tracks = tracks != null?Lambda.array(Lambda.map(tracks,function(_track) {
-			return new org.jinjor.webmidi.Track(_track.name,synths[_track.synth.name],_track.channel,_track.program,_track.messages.filter(function(e) {
-				return e.message == null && e.time == null;
-			}));
+			return new org.jinjor.webmidi.Track(_track.name,_track.synthDef,_track.channel,_track.program,_track.messages);
 		})):[];
 	}
-	,addTrack: function(synth,channel) {
-		var track = new org.jinjor.webmidi.Track("_",synth,channel,null,null);
+	,addTrack: function(synthDef,channel) {
+		var track = new org.jinjor.webmidi.Track("_",synthDef,channel,null,null);
 		this.tracks.push(track);
 	}
 	,gainPxPerMs: function(amount) {
@@ -1763,7 +1765,7 @@ org.jinjor.webmidi.Tune.prototype = {
 	,getPxPerMs: function() {
 		return org.jinjor.webmidi.Tune.pxPerMsModes[this.pxPerMsMode];
 	}
-	,refresh: function(smfData,synth) {
+	,refresh: function(smfData,synthDef) {
 		if(smfData.format != 1) throw "まだ1しか受け付けません";
 		if(smfData.timeMode > 32768) throw "まだMSB=0しか受け付けません";
 		this.format = smfData.format;
@@ -1776,7 +1778,7 @@ org.jinjor.webmidi.Tune.prototype = {
 				deltaSum += e[0];
 				return [deltaSum,e[1],e[2],e[3]];
 			});
-			return new org.jinjor.webmidi.Track("_",synth,1,null,messages);
+			return new org.jinjor.webmidi.Track("_",synthDef,1,null,messages);
 		});
 	}
 	,pxPerMsMode: null
@@ -1820,6 +1822,7 @@ org.jinjor.webmidi.daos.AngularTuneDao.prototype = {
 		});
 	}
 	,save: function(tune,address,_callback) {
+		haxe.Log.trace(tune.tracks,{ fileName : "TuneDao.hx", lineNumber : 22, className : "org.jinjor.webmidi.daos.AngularTuneDao", methodName : "save"});
 		this.http({ method : "POST", url : "/saveContents", data : { address : address, contents : haxe.Json.stringify(tune.tracks)}}).success(function() {
 			_callback(null);
 		}).error(function(e) {
@@ -1890,7 +1893,6 @@ org.jinjor.webmidi.views.HtmlTuneEditView = $hxClasses["org.jinjor.webmidi.views
 	this.renderAll = function() {
 		Lambda.foreach(rerenders,function(rerender) {
 			rerender[0]();
-			haxe.Log.trace("hoge",{ fileName : "TuneEditView.hx", lineNumber : 53, className : "org.jinjor.webmidi.views.HtmlTuneEditView", methodName : "new"});
 			return true;
 		});
 	};
@@ -1962,5 +1964,3 @@ org.jinjor.webmidi.Tune.pxPerMsModes = Lambda.array(Lambda.map([1,2,4,8,16,32],f
 	return 1000 / 600000 * ratio;
 }));
 org.jinjor.webmidi.All.main();
-
-//@ sourceMappingURL=webmidi.js.map
