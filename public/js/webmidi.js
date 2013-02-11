@@ -1890,6 +1890,7 @@ org.jinjor.webmidi.views.HtmlTuneEditView = $hxClasses["org.jinjor.webmidi.views
 	this.renderAll = function() {
 		Lambda.foreach(rerenders,function(rerender) {
 			rerender[0]();
+			haxe.Log.trace("hoge",{ fileName : "TuneEditView.hx", lineNumber : 53, className : "org.jinjor.webmidi.views.HtmlTuneEditView", methodName : "new"});
 			return true;
 		});
 	};

@@ -131,7 +131,7 @@ class Sequencer{
         case Playing(playState) : true;
         case Recording(recState) : true;
       }){
-        Timer.delay(r.render, 30);
+        Timer.delay(r.render, 50);
       }
     };
     r.tick();

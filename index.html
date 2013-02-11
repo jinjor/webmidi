@@ -92,10 +92,6 @@
     };
     
     $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
-    $scope.tune = new Tune();
-    
-    
-    $scope.rerenderTracks;
     
     var view;
     var createView = function(){
@@ -104,7 +100,7 @@
     }
     
     $scope.saveContents = function(){
-      tuneDao.save($scope.tune, function(e){
+      tuneDao.save($scope.sequencer.tune, function(e){
         if(e){
           alert(e)
         }else{
@@ -114,19 +110,18 @@
     };
     
     $scope.selectTrack = function(track){
-      $scope.tune.selectedTrackId = track.id;
+      $scope.sequencer.tune.selectedTrackId = track.id;
     };
     $scope.trackIsSelected = function(track){
-      return $scope.tune.trackIsSelected(track) ? 'selected' : null;
+      return $scope.sequencer.tune.trackIsSelected(track) ? 'selected' : null;
     };
       
     $scope.messages = [];
     $scope.keyIsPressed = function(track){
-      return ($scope.tune.trackIsSelected(track) &&
+      return ($scope.sequencer.tune.trackIsSelected(track) &&
               $scope.sequencer.recState &&
               $scope.sequencer.recState.keyIsPressed()) ? 'pressed' : '';
     };
-    $scope.playing = false;
     $scope.play = function(){
       $scope.sequencer.play(function(){
         view.renderLocation();
@@ -162,9 +157,10 @@
           alert(e);
         }else{
           console.log(tracks);
-          $scope.tune.replaceTracksByLoadedTracks(tracks, $scope.synths);
+          var tune = new Tune();
+          tune.replaceTracksByLoadedTracks(tracks, $scope.synths);
           var synthMap = {};
-          $scope.sequencer = new Sequencer($scope.tune, function(synthDef){
+          $scope.sequencer = new Sequencer(tune, function(synthDef){
             return synthMap[synthDef.name]
           });
           _($scope.synths).each(function(synth){
@@ -190,7 +186,7 @@
             var files = event.dataTransfer.files;
             var f = files[0];
             var smfFile = new SmfFile(f, new FileReader(), function(){
-              $scope.tune.refresh(smfFile.smfData, $scope.synths.GMPlayer);
+              $scope.sequencer.tune.refresh(smfFile.smfData, $scope.synths.GMPlayer);
               $scope.$apply();
               setTimeout(function(){
                 createView().renderAll();
@@ -235,7 +231,7 @@
       </select>
     </p>
   </div>
-  <button ng-repeat="synth in synths" ng-click="tune.addTrack(synth, 1)">{{synth.name}}</button>
+  <button ng-repeat="synth in synths" ng-click="sequencer.tune.addTrack(synth, 1)">{{synth.name}}</button>
   
   <div>
     <button ng-click="rec()" ng-disabled="sequencer.isPlaying()">●Rec</button>
@@ -248,7 +244,7 @@
   </div>
   <div class="tracks">
     <ul>
-      <li ng-repeat="track in tune.tracks" class='track {{trackIsSelected(track)}}' ng-click="selectTrack(track)">
+      <li ng-repeat="track in sequencer.tune.tracks" class='track {{trackIsSelected(track)}}' ng-click="selectTrack(track)">
         <div class="track_def">
           <!--<label>{{$index + 1}}</label>-->
           <span class="keyboard {{keyIsPressed(track)}}">■</span> <!--{{track.name}} : {{track.synth.name}}-->
