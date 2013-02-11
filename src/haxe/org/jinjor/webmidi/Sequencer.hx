@@ -8,22 +8,38 @@ using Lambda;
 using org.jinjor.util.Util;
 
 class Sequencer{
+  
   public var location : Int;
   public var tune : Tune;
-  public var playing : String;
-  public var recState : RecState;
+  public var playStatus : PlayStatus;
   private var getSynth : SynthDef -> Dynamic;
   
   public function new(tune : Tune, getSynth : SynthDef -> Dynamic){
     this.location = 0;
     this.tune = tune;
-    this.playing = null;
-    this.recState = null;
+    this.playStatus = PlayStatus.Stop(0);
     this.getSynth = getSynth;
   }
+  private function getLocation(){
+    return switch(this.playStatus){
+      case Stop(location) : location;
+      case Playing(playState) : playState.getLocation();
+      case Recording(recState) : recState.getLocation();
+    };
+  }
+  public function isPlaying(){
+    return switch(this.playStatus){
+      case Stop(location) : false;
+      case Playing(playState) : true;
+      case Recording(recState) : true;
+    };
+  }
+  
   public function send(t, m0, m1, m2){
-    if(this.recState != null){
-      this.recState.send(m0, m1, m2);
+    switch(playStatus) {
+      case Stop(location):{};
+      case Playing(playState):{};
+      case Recording(recState): {recState.send(m0, m1, m2);};
     }
     this.tune.getSelectedTracks().foreach(function(track){
       sendMidiMessage(track, m0, m1, m2);//キーボードからはchannel1で来る前提
@@ -31,9 +47,10 @@ class Sequencer{
     });
   }
   public function rec(rerender : Void -> Void){
-    this.play(rerender, 'recoding');
+    this.play(rerender, true);
   }
   public function stopPlaying(){
+    this.playStatus = PlayStatus.Stop(getLocation());
     this.tune.tracks.foreach(function(track){
       this.getSynth(track.synthDef).allSoundOff();
       return true;
@@ -45,32 +62,32 @@ class Sequencer{
   public function programChange(track : Track){
     this.sendMidiMessage(track, 0xc0, track.program.number, 0);
   }
-  public function play(rerender : Void -> Void, optMode : String){
+  public function play(rerender : Void -> Void, record : Bool){
     if(this.tune.tracks.length <= 0){
       return;
     }
     var that = this;
-    this.recState = new RecState();
-    if(optMode == 'recoding'){
-      this.recState.onNoteFinished = function(note, velocity, startTime, endTime){
+    if(record){
+      this.playStatus = PlayStatus.Recording(new RecState(function(note, velocity, startTime, endTime){
         that.tune.getSelectedTracks().foreach(function(track){
           track.recNote(note, velocity, that.tune.msToTick(startTime), that.tune.msToTick(endTime));
           return true;
         });
-      };
-      this.recState.onElse = function(time, m0, m1, m2){
+      },function(time, m0, m1, m2){
         that.tune.getSelectedTracks().foreach(function(track){
           track.recElse(that.tune.msToTick(time),m0, m1, m2);
           return true;
         });
-      };
+      }));
+    }else{
+      this.playStatus = PlayStatus.Playing(new PlayState());
     }
+    
     var messageTrackPairs : Array<Array<Dynamic>> = this.tune.tracks.fold(function(track : Track, memo : Array<Array<Dynamic>>){
       var pairs = track.messages.map(function(mes){ return [mes, track]; }).array();
       return memo.concat(pairs);
     }, []);
-    
-    this.playing = optMode.or('playing');
+
     messageTrackPairs.sort(function(a, b){
       return a[0][0] - b[0][0];
     });
@@ -86,14 +103,19 @@ class Sequencer{
     var that = this;
     var r : Dynamic = {};
     r.tick = function(){
-      var location = that.recState.getLocation();
+      var location = getLocation();
       current = if(index < messageTrackPairs.length) messageTrackPairs[index] else null;
       currentTrack = current[1];
       currentMessage = current[0];
-      if(that.playing == null){
-        that.stopPlaying();//念のため
+      
+      if(switch(that.playStatus){
+        case Stop(location) : true;
+        case Playing(playState) : false;
+        case Recording(recState) : false;
+      }){
+        that.stopPlaying();
       }else if(current == null){
-        that.stop();
+        that.stopPlaying();
       }else if(that.tune.tickToMs(currentMessage[0]) < location){
         sendMidiMessage(currentTrack, currentMessage[1], currentMessage[2], currentMessage[3]);
         index++;
@@ -103,9 +125,12 @@ class Sequencer{
       }
     };
     r.render = function(){
-      if(that.playing != null){
-        var s = Date.now().getTime();
-        rerender();
+      rerender();
+      if(switch(that.playStatus){
+        case Stop(location) : false;
+        case Playing(playState) : true;
+        case Recording(recState) : true;
+      }){
         Timer.delay(r.render, 30);
       }
     };
@@ -114,13 +139,5 @@ class Sequencer{
   }
   public function gainPxPerMs(amount){
     this.tune.gainPxPerMs(amount);
-  }
-
-  public function stop(){
-    trace("stop");
-    //$scope.recState = null;
-    this.location = 0;
-    this.playing = null;
-    this.stopPlaying();
   }
 }

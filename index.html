@@ -99,7 +99,7 @@
     
     var view;
     var createView = function(){
-      view = new TuneEditView(document, $scope.tune);
+      view = new TuneEditView(document, $scope.sequencer);
       return view;
     }
     
@@ -129,16 +129,21 @@
     $scope.playing = false;
     $scope.play = function(){
       $scope.sequencer.play(function(){
-        view.rerenderTracks($scope.sequencer);
+        view.renderLocation();
       });
     };
     $scope.rec = function(){
       $scope.sequencer.rec(function(){
-        view.rerenderTracks($scope.sequencer);
+        view.renderLocation();
       });
+    };
+    $scope.stop = function(){
+      $scope.sequencer.stopPlaying();
+      view.renderAll();
     };
     $scope.gainPxPerMs = function(amount){
       $scope.sequencer.gainPxPerMs(amount);
+      view.renderAll();
     };
     
     jazz.onMessage(function(t, m0, m1, m2){
@@ -167,7 +172,7 @@
             synthMap[synth.id] = synth;
           });
           setTimeout(function(){
-            createView().rerenderTracks($scope.sequencer);
+            createView().renderAll();
           },0);
         }
       });
@@ -188,7 +193,7 @@
               $scope.tune.refresh(smfFile.smfData, $scope.synths.GMPlayer);
               $scope.$apply();
               setTimeout(function(){
-                createView().rerenderTracks($scope.sequencer);
+                createView().renderAll();
               },0);
             });
             event.preventDefault();
@@ -233,13 +238,13 @@
   <button ng-repeat="synth in synths" ng-click="tune.addTrack(synth, 1)">{{synth.name}}</button>
   
   <div>
-    <button ng-click="rec()" ng-disabled="sequencer.playing">●Rec</button>
-    <button ng-click="play()" ng-disabled="sequencer.playing">Play</button>
-    <button ng-click="sequencer.stop()" ng-disabled="!sequencer.playing">Stop</button>
+    <button ng-click="rec()" ng-disabled="sequencer.isPlaying()">●Rec</button>
+    <button ng-click="play()" ng-disabled="sequencer.isPlaying()">Play</button>
+    <button ng-click="stop()" ng-disabled="!sequencer.isPlaying()">Stop</button>
   </div>
   <div>
-    <button ng-click="gainPxPerMs(-1)" ng-disabled="tune.hasMinPxPerMs()">-</button>
-    <button ng-click="gainPxPerMs(1)" ng-disabled="tune.hasMaxPxPerMs()">+</button>
+    <button ng-click="gainPxPerMs(-1)" ng-disabled="sequencer.tune.hasMinPxPerMs()">-</button>
+    <button ng-click="gainPxPerMs(1)" ng-disabled="sequencer.tune.hasMaxPxPerMs()">+</button>
   </div>
   <div class="tracks">
     <ul>

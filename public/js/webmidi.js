@@ -1,4 +1,9 @@
 var $hxClasses = $hxClasses || {},$estr = function() { return js.Boot.__string_rec(this,''); };
+function $extend(from, fields) {
+	function inherit() {}; inherit.prototype = from; var proto = new inherit();
+	for (var name in fields) proto[name] = fields[name];
+	return proto;
+}
 var EReg = $hxClasses["EReg"] = function(r,opt) {
 	opt = opt.split("u").join("");
 	this.r = new RegExp(r,opt);
@@ -1441,47 +1446,35 @@ org.jinjor.webmidi.All.main = function() {
 org.jinjor.webmidi.Sequencer = $hxClasses["org.jinjor.webmidi.Sequencer"] = function(tune,getSynth) {
 	this.location = 0;
 	this.tune = tune;
-	this.playing = null;
-	this.recState = null;
+	this.playStatus = org.jinjor.webmidi.PlayStatus.Stop(0);
 	this.getSynth = getSynth;
 };
 org.jinjor.webmidi.Sequencer.__name__ = ["org","jinjor","webmidi","Sequencer"];
 org.jinjor.webmidi.Sequencer.prototype = {
-	stop: function() {
-		haxe.Log.trace("stop",{ fileName : "Sequencer.hx", lineNumber : 120, className : "org.jinjor.webmidi.Sequencer", methodName : "stop"});
-		this.location = 0;
-		this.playing = null;
-		this.stopPlaying();
-	}
-	,gainPxPerMs: function(amount) {
+	gainPxPerMs: function(amount) {
 		this.tune.gainPxPerMs(amount);
 	}
-	,play: function(rerender,optMode) {
+	,play: function(rerender,record) {
 		var _g = this;
 		if(this.tune.tracks.length <= 0) return;
 		var that = this;
-		this.recState = new org.jinjor.webmidi.RecState();
-		if(optMode == "recoding") {
-			this.recState.onNoteFinished = function(note,velocity,startTime,endTime) {
-				Lambda.foreach(that.tune.getSelectedTracks(),function(track) {
-					track.recNote(note,velocity,that.tune.msToTick(startTime),that.tune.msToTick(endTime));
-					return true;
-				});
-			};
-			this.recState.onElse = function(time,m0,m1,m2) {
-				Lambda.foreach(that.tune.getSelectedTracks(),function(track) {
-					track.recElse(that.tune.msToTick(time),m0,m1,m2);
-					return true;
-				});
-			};
-		}
+		if(record) this.playStatus = org.jinjor.webmidi.PlayStatus.Recording(new org.jinjor.webmidi.RecState(function(note,velocity,startTime,endTime) {
+			Lambda.foreach(that.tune.getSelectedTracks(),function(track) {
+				track.recNote(note,velocity,that.tune.msToTick(startTime),that.tune.msToTick(endTime));
+				return true;
+			});
+		},function(time,m0,m1,m2) {
+			Lambda.foreach(that.tune.getSelectedTracks(),function(track) {
+				track.recElse(that.tune.msToTick(time),m0,m1,m2);
+				return true;
+			});
+		})); else this.playStatus = org.jinjor.webmidi.PlayStatus.Playing(new org.jinjor.webmidi.PlayState());
 		var messageTrackPairs = Lambda.fold(this.tune.tracks,function(track,memo) {
 			var pairs = Lambda.array(Lambda.map(track.messages,function(mes) {
 				return [mes,track];
 			}));
 			return memo.concat(pairs);
 		},[]);
-		this.playing = org.jinjor.util.Util.or(optMode,"playing");
 		messageTrackPairs.sort(function(a,b) {
 			return a[0][0] - b[0][0];
 		});
@@ -1496,22 +1489,55 @@ org.jinjor.webmidi.Sequencer.prototype = {
 		var that1 = this;
 		var r = { };
 		r.tick = function() {
-			var location = that1.recState.getLocation();
+			var location = _g.getLocation();
 			current = index < messageTrackPairs.length?messageTrackPairs[index]:null;
 			currentTrack = current[1];
 			currentMessage = current[0];
-			if(that1.playing == null) that1.stopPlaying(); else if(current == null) that1.stop(); else if(that1.tune.tickToMs(currentMessage[0]) < location) {
+			if((function($this) {
+				var $r;
+				var $e = (that1.playStatus);
+				switch( $e[1] ) {
+				case 0:
+					var location1 = $e[2];
+					$r = true;
+					break;
+				case 1:
+					var playState = $e[2];
+					$r = false;
+					break;
+				case 2:
+					var recState = $e[2];
+					$r = false;
+					break;
+				}
+				return $r;
+			}(this))) that1.stopPlaying(); else if(current == null) that1.stopPlaying(); else if(that1.tune.tickToMs(currentMessage[0]) < location) {
 				_g.sendMidiMessage(currentTrack,currentMessage[1],currentMessage[2],currentMessage[3]);
 				index++;
 				r.tick();
 			} else haxe.Timer.delay(r.tick,1);
 		};
 		r.render = function() {
-			if(that1.playing != null) {
-				var s = new Date().getTime();
-				rerender();
-				haxe.Timer.delay(r.render,30);
-			}
+			rerender();
+			if((function($this) {
+				var $r;
+				var $e = (that1.playStatus);
+				switch( $e[1] ) {
+				case 0:
+					var location = $e[2];
+					$r = false;
+					break;
+				case 1:
+					var playState = $e[2];
+					$r = true;
+					break;
+				case 2:
+					var recState = $e[2];
+					$r = true;
+					break;
+				}
+				return $r;
+			}(this))) haxe.Timer.delay(r.render,30);
 		};
 		r.tick();
 		r.render();
@@ -1524,41 +1550,109 @@ org.jinjor.webmidi.Sequencer.prototype = {
 	}
 	,stopPlaying: function() {
 		var _g = this;
+		this.playStatus = org.jinjor.webmidi.PlayStatus.Stop(this.getLocation());
 		Lambda.foreach(this.tune.tracks,function(track) {
 			_g.getSynth(track.synthDef).allSoundOff();
 			return true;
 		});
 	}
 	,rec: function(rerender) {
-		this.play(rerender,"recoding");
+		this.play(rerender,true);
 	}
 	,send: function(t,m0,m1,m2) {
 		var _g = this;
-		if(this.recState != null) this.recState.send(m0,m1,m2);
+		var $e = (this.playStatus);
+		switch( $e[1] ) {
+		case 0:
+			var location = $e[2];
+			break;
+		case 1:
+			var playState = $e[2];
+			break;
+		case 2:
+			var recState = $e[2];
+			recState.send(m0,m1,m2);
+			break;
+		}
 		Lambda.foreach(this.tune.getSelectedTracks(),function(track) {
 			_g.sendMidiMessage(track,m0,m1,m2);
 			return true;
 		});
 	}
+	,isPlaying: function() {
+		return (function($this) {
+			var $r;
+			var $e = ($this.playStatus);
+			switch( $e[1] ) {
+			case 0:
+				var location = $e[2];
+				$r = false;
+				break;
+			case 1:
+				var playState = $e[2];
+				$r = true;
+				break;
+			case 2:
+				var recState = $e[2];
+				$r = true;
+				break;
+			}
+			return $r;
+		}(this));
+	}
+	,getLocation: function() {
+		return (function($this) {
+			var $r;
+			var $e = ($this.playStatus);
+			switch( $e[1] ) {
+			case 0:
+				var location = $e[2];
+				$r = location;
+				break;
+			case 1:
+				var playState = $e[2];
+				$r = playState.getLocation();
+				break;
+			case 2:
+				var recState = $e[2];
+				$r = recState.getLocation();
+				break;
+			}
+			return $r;
+		}(this));
+	}
 	,getSynth: null
-	,recState: null
-	,playing: null
+	,playStatus: null
 	,tune: null
 	,location: null
 	,__class__: org.jinjor.webmidi.Sequencer
 }
-org.jinjor.webmidi.RecState = $hxClasses["org.jinjor.webmidi.RecState"] = function() {
-	this.keyCount = 0;
-	this.noteOns = [];
-	this.running = false;
+org.jinjor.webmidi.PlayStatus = $hxClasses["org.jinjor.webmidi.PlayStatus"] = { __ename__ : ["org","jinjor","webmidi","PlayStatus"], __constructs__ : ["Stop","Playing","Recording"] }
+org.jinjor.webmidi.PlayStatus.Stop = function(location) { var $x = ["Stop",0,location]; $x.__enum__ = org.jinjor.webmidi.PlayStatus; $x.toString = $estr; return $x; }
+org.jinjor.webmidi.PlayStatus.Playing = function(playState) { var $x = ["Playing",1,playState]; $x.__enum__ = org.jinjor.webmidi.PlayStatus; $x.toString = $estr; return $x; }
+org.jinjor.webmidi.PlayStatus.Recording = function(recState) { var $x = ["Recording",2,recState]; $x.__enum__ = org.jinjor.webmidi.PlayStatus; $x.toString = $estr; return $x; }
+org.jinjor.webmidi.PlayState = $hxClasses["org.jinjor.webmidi.PlayState"] = function() {
 	this.startTime = Math.floor(new Date().getTime());
 };
-org.jinjor.webmidi.RecState.__name__ = ["org","jinjor","webmidi","RecState"];
-org.jinjor.webmidi.RecState.prototype = {
+org.jinjor.webmidi.PlayState.__name__ = ["org","jinjor","webmidi","PlayState"];
+org.jinjor.webmidi.PlayState.prototype = {
 	getLocation: function() {
 		return Math.floor(new Date().getTime()) - this.startTime;
 	}
-	,keyIsPressed: function() {
+	,startTime: null
+	,__class__: org.jinjor.webmidi.PlayState
+}
+org.jinjor.webmidi.RecState = $hxClasses["org.jinjor.webmidi.RecState"] = function(onNoteFinished,onElse) {
+	org.jinjor.webmidi.PlayState.call(this);
+	this.keyCount = 0;
+	this.noteOns = [];
+	this.onNoteFinished = onNoteFinished;
+	this.onElse = onElse;
+};
+org.jinjor.webmidi.RecState.__name__ = ["org","jinjor","webmidi","RecState"];
+org.jinjor.webmidi.RecState.__super__ = org.jinjor.webmidi.PlayState;
+org.jinjor.webmidi.RecState.prototype = $extend(org.jinjor.webmidi.PlayState.prototype,{
+	keyIsPressed: function() {
 		return this.keyCount > 0;
 	}
 	,reset: function() {
@@ -1577,16 +1671,12 @@ org.jinjor.webmidi.RecState.prototype = {
 			this.keyCount--;
 		} else this.onElse(time,m0,m1,m2);
 	}
-	,onElse: function(time,m0,m1,m2) {
-	}
-	,onNoteFinished: function(startTime,endTime,velocity,time) {
-	}
-	,startTime: null
-	,running: null
+	,onElse: null
+	,onNoteFinished: null
 	,noteOns: null
 	,keyCount: null
 	,__class__: org.jinjor.webmidi.RecState
-}
+});
 org.jinjor.webmidi.Track = $hxClasses["org.jinjor.webmidi.Track"] = function(name,synthDef,channel,program,messages) {
 	this.id = org.jinjor.webmidi.Track.createTrackId();
 	this.name = name;
@@ -1678,7 +1768,7 @@ org.jinjor.webmidi.Tune.prototype = {
 		if(smfData.timeMode > 32768) throw "まだMSB=0しか受け付けません";
 		this.format = smfData.format;
 		this.timeMode = smfData.timeMode;
-		haxe.Log.trace("timeMode=" + this.timeMode,{ fileName : "Tune.hx", lineNumber : 116, className : "org.jinjor.webmidi.Tune", methodName : "refresh"});
+		haxe.Log.trace("timeMode=" + this.timeMode,{ fileName : "Tune.hx", lineNumber : 126, className : "org.jinjor.webmidi.Tune", methodName : "refresh"});
 		var that = this;
 		this.tracks = smfData.tracks.map(function(events) {
 			var deltaSum = 0;
@@ -1763,11 +1853,13 @@ if(!org.jinjor.webmidi.views) org.jinjor.webmidi.views = {}
 org.jinjor.webmidi.views.TuneEditView = $hxClasses["org.jinjor.webmidi.views.TuneEditView"] = function() { }
 org.jinjor.webmidi.views.TuneEditView.__name__ = ["org","jinjor","webmidi","views","TuneEditView"];
 org.jinjor.webmidi.views.TuneEditView.prototype = {
-	rerenderTracks: null
+	renderLocation: null
+	,renderAll: null
 	,__class__: org.jinjor.webmidi.views.TuneEditView
 }
-org.jinjor.webmidi.views.HtmlTuneEditView = $hxClasses["org.jinjor.webmidi.views.HtmlTuneEditView"] = function(document,tune) {
-	this.rerenders = tune.tracks.map(function(track) {
+org.jinjor.webmidi.views.HtmlTuneEditView = $hxClasses["org.jinjor.webmidi.views.HtmlTuneEditView"] = function(document,sequencer) {
+	var tune = sequencer.tune;
+	var rerenders = tune.tracks.map(function(track) {
 		var frame = document.getElementById("pianoroll_summary." + track.id);
 		var canvas1 = document.getElementById("" + track.id + ".1");
 		var canvas2 = document.getElementById("" + track.id + ".2");
@@ -1777,34 +1869,42 @@ org.jinjor.webmidi.views.HtmlTuneEditView = $hxClasses["org.jinjor.webmidi.views
 		ctx1.beginPath();
 		ctx2.fillStyle = "#7777ff";
 		ctx2.beginPath();
-		return function(recState,pxPerMs) {
-			if(recState != null) {
-				ctx2.clearRect(0,0,canvas2.width,canvas2.height);
-				ctx2.fillRect(recState.getLocation() * pxPerMs,0,1,127);
-			} else {
-				ctx2.clearRect(0,0,canvas2.width,canvas2.height);
-				ctx1.clearRect(0,0,canvas1.width,canvas1.height);
-				Lambda.foreach(track.messages,function(message) {
-					var x1 = tune.tickToMs(message[0]) * pxPerMs;
-					var y1 = 127 - message[2];
-					ctx1.fillRect(x1,y1,2,2);
-					return true;
-				});
-			}
+		var renderAll = function() {
+			var pxPerMs = sequencer.tune.getPxPerMs();
+			ctx2.clearRect(0,0,canvas2.width,canvas2.height);
+			ctx1.clearRect(0,0,canvas1.width,canvas1.height);
+			Lambda.foreach(track.messages,function(message) {
+				var x1 = tune.tickToMs(message[0]) * pxPerMs;
+				var y1 = 127 - message[2];
+				ctx1.fillRect(x1,y1,2,2);
+				return true;
+			});
 		};
+		var renderLocation = function() {
+			var pxPerMs = sequencer.tune.getPxPerMs();
+			ctx2.clearRect(0,0,canvas2.width,canvas2.height);
+			ctx2.fillRect(sequencer.getLocation() * pxPerMs,0,1,127);
+		};
+		return [renderAll,renderLocation];
 	});
+	this.renderAll = function() {
+		Lambda.foreach(rerenders,function(rerender) {
+			rerender[0]();
+			return true;
+		});
+	};
+	this.renderLocation = function() {
+		Lambda.foreach(rerenders,function(rerender) {
+			rerender[1]();
+			return true;
+		});
+	};
 };
 org.jinjor.webmidi.views.HtmlTuneEditView.__name__ = ["org","jinjor","webmidi","views","HtmlTuneEditView"];
 org.jinjor.webmidi.views.HtmlTuneEditView.__interfaces__ = [org.jinjor.webmidi.views.TuneEditView];
 org.jinjor.webmidi.views.HtmlTuneEditView.prototype = {
-	rerenderTracks: function(sequencer) {
-		var pxPerMs = sequencer.tune.getPxPerMs();
-		Lambda.foreach(this.rerenders,function(rerender) {
-			rerender(sequencer.recState,pxPerMs);
-			return true;
-		});
-	}
-	,rerenders: null
+	renderLocation: null
+	,renderAll: null
 	,__class__: org.jinjor.webmidi.views.HtmlTuneEditView
 }
 function $iterator(o) { if( o instanceof Array ) return function() { return HxOverrides.iter(o); }; return typeof(o.iterator) == 'function' ? $bind(o,o.iterator) : o.iterator; };

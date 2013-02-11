@@ -7,14 +7,17 @@ using Lambda;
 using org.jinjor.util.Util;
 
 interface TuneEditView{
-  function rerenderTracks(sequencer : Sequencer) : Void;
+  var renderAll : Void -> Void;
+  var renderLocation : Void -> Void;
 }
 class HtmlTuneEditView implements TuneEditView {
   
-  private var rerenders : Array<Dynamic>;
+  public var renderAll : Void -> Void;
+  public var renderLocation : Void -> Void;
   
-  public function new(document, tune){
-    this.rerenders = tune.tracks.map(function(track : Track){
+  public function new(document, sequencer){
+    var tune = sequencer.tune;
+    var rerenders : Array<Array<Void -> Void>> = tune.tracks.map(function(track : Track){
       var frame = document.getElementById('pianoroll_summary.' + track.id);
       var canvas1 = document.getElementById('' + track.id + ".1");
       var canvas2 = document.getElementById('' + track.id + ".2");
@@ -26,29 +29,36 @@ class HtmlTuneEditView implements TuneEditView {
       ctx2.fillStyle = "#7777ff";
       ctx2.beginPath();
       
-      return function(recState : RecState, pxPerMs){
-        if(recState != null){
-          ctx2.clearRect(0,0, canvas2.width, canvas2.height);
-          ctx2.fillRect(recState.getLocation() * pxPerMs, 0, 1, 127);
-        }else{
-          ctx2.clearRect(0,0, canvas2.width, canvas2.height);
-          ctx1.clearRect(0,0, canvas1.width, canvas1.height);
-          track.messages.foreach(function(message){
-            var x1 = tune.tickToMs(message[0]) * pxPerMs;
-            var y1 = (127 - message[2]);
-            ctx1.fillRect(x1, y1, 2, 2);
-            return true;
-          });
-        }
+      var renderAll = function(){
+        var pxPerMs = sequencer.tune.getPxPerMs();
+        ctx2.clearRect(0,0, canvas2.width, canvas2.height);
+        ctx1.clearRect(0,0, canvas1.width, canvas1.height);
+        track.messages.foreach(function(message){
+          var x1 = tune.tickToMs(message[0]) * pxPerMs;
+          var y1 = (127 - message[2]);
+          ctx1.fillRect(x1, y1, 2, 2);
+          return true;
+        });
       };
+      var renderLocation = function(){
+        var pxPerMs = sequencer.tune.getPxPerMs();
+        ctx2.clearRect(0,0, canvas2.width, canvas2.height);
+        ctx2.fillRect(sequencer.getLocation() * pxPerMs, 0, 1, 127);
+      };
+      return [renderAll, renderLocation];
     });
-  }
-  public function rerenderTracks(sequencer : Sequencer){
-    var pxPerMs = sequencer.tune.getPxPerMs();
-    rerenders.foreach(function(rerender){
-      rerender(sequencer.recState, pxPerMs);
-      return true;
-    });
+    this.renderAll = function(){
+      rerenders.foreach(function(rerender){
+        rerender[0]();
+        return true;
+      });
+    };
+    this.renderLocation = function(){
+      rerenders.foreach(function(rerender){
+        rerender[1]();
+        return true;
+      });
+    };
   }
   
 }

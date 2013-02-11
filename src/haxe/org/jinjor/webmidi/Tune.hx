@@ -5,21 +5,34 @@ import js.Lib;
 using Lambda;
 using org.jinjor.util.Util;
 
-class RecState{
-  public var keyCount : Int;
-  public var noteOns : Array<Dynamic>;
-  public var running : Bool;
-  public var startTime : Int;
-  
+enum PlayStatus{
+  Stop(location : Int);
+  Playing(playState : PlayState);
+  Recording(recState : RecState);
+}
+class PlayState{
+  private var startTime : Int;
   public function new() {
-    this.keyCount = 0;
-    this.noteOns = [];
-    this.running = false;
     this.startTime = Math.floor(Date.now().getTime());
   }
-  public dynamic function onNoteFinished(startTime, endTime, velocity, time : Int){
+  public function getLocation() : Int {
+    return Math.floor(Date.now().getTime()) - this.startTime;
   }
-  public dynamic function onElse(time : Int, m0, m1, m2){
+}
+  
+class RecState extends PlayState{
+  public var keyCount : Int;
+  public var noteOns : Array<Dynamic>;
+  private var onNoteFinished : Int -> Int -> Int -> Int -> Void;
+  private var onElse : Int -> Int -> Int -> Int -> Void;
+    
+  public function new(onNoteFinished, onElse) {
+    super();
+    this.keyCount = 0;
+    this.noteOns = [];
+    
+    this.onNoteFinished = onNoteFinished;
+    this.onElse = onElse;
   }
   public function send(m0, m1, m2){
     var time = this.getLocation();
@@ -37,15 +50,12 @@ class RecState{
       this.onElse(time, m0, m1, m2);
     }
   }
-  public function reset(){
+  private function reset(){
     this.keyCount = 0;
     this.noteOns = [];
   }
   public function keyIsPressed() : Bool {
     return this.keyCount > 0;
-  }
-  public function getLocation() : Int {
-    return Math.floor(Date.now().getTime()) - this.startTime;
   }
 }
 
