@@ -1,5 +1,111 @@
-var HxOverrides = function() { }
-HxOverrides.__name__ = true;
+var $hxClasses = $hxClasses || {},$estr = function() { return js.Boot.__string_rec(this,''); };
+var EReg = $hxClasses["EReg"] = function(r,opt) {
+	opt = opt.split("u").join("");
+	this.r = new RegExp(r,opt);
+};
+EReg.__name__ = ["EReg"];
+EReg.prototype = {
+	customReplace: function(s,f) {
+		var buf = new StringBuf();
+		while(true) {
+			if(!this.match(s)) break;
+			buf.b += Std.string(this.matchedLeft());
+			buf.b += Std.string(f(this));
+			s = this.matchedRight();
+		}
+		buf.b += Std.string(s);
+		return buf.b;
+	}
+	,replace: function(s,by) {
+		return s.replace(this.r,by);
+	}
+	,split: function(s) {
+		var d = "#__delim__#";
+		return s.replace(this.r,d).split(d);
+	}
+	,matchedPos: function() {
+		if(this.r.m == null) throw "No string matched";
+		return { pos : this.r.m.index, len : this.r.m[0].length};
+	}
+	,matchedRight: function() {
+		if(this.r.m == null) throw "No string matched";
+		var sz = this.r.m.index + this.r.m[0].length;
+		return this.r.s.substr(sz,this.r.s.length - sz);
+	}
+	,matchedLeft: function() {
+		if(this.r.m == null) throw "No string matched";
+		return this.r.s.substr(0,this.r.m.index);
+	}
+	,matched: function(n) {
+		return this.r.m != null && n >= 0 && n < this.r.m.length?this.r.m[n]:(function($this) {
+			var $r;
+			throw "EReg::matched";
+			return $r;
+		}(this));
+	}
+	,match: function(s) {
+		if(this.r.global) this.r.lastIndex = 0;
+		this.r.m = this.r.exec(s);
+		this.r.s = s;
+		return this.r.m != null;
+	}
+	,r: null
+	,__class__: EReg
+}
+var Hash = $hxClasses["Hash"] = function() {
+	this.h = { };
+};
+Hash.__name__ = ["Hash"];
+Hash.prototype = {
+	toString: function() {
+		var s = new StringBuf();
+		s.b += Std.string("{");
+		var it = this.keys();
+		while( it.hasNext() ) {
+			var i = it.next();
+			s.b += Std.string(i);
+			s.b += Std.string(" => ");
+			s.b += Std.string(Std.string(this.get(i)));
+			if(it.hasNext()) s.b += Std.string(", ");
+		}
+		s.b += Std.string("}");
+		return s.b;
+	}
+	,iterator: function() {
+		return { ref : this.h, it : this.keys(), hasNext : function() {
+			return this.it.hasNext();
+		}, next : function() {
+			var i = this.it.next();
+			return this.ref["$" + i];
+		}};
+	}
+	,keys: function() {
+		var a = [];
+		for( var key in this.h ) {
+		if(this.h.hasOwnProperty(key)) a.push(key.substr(1));
+		}
+		return HxOverrides.iter(a);
+	}
+	,remove: function(key) {
+		key = "$" + key;
+		if(!this.h.hasOwnProperty(key)) return false;
+		delete(this.h[key]);
+		return true;
+	}
+	,exists: function(key) {
+		return this.h.hasOwnProperty("$" + key);
+	}
+	,get: function(key) {
+		return this.h["$" + key];
+	}
+	,set: function(key,value) {
+		this.h["$" + key] = value;
+	}
+	,h: null
+	,__class__: Hash
+}
+var HxOverrides = $hxClasses["HxOverrides"] = function() { }
+HxOverrides.__name__ = ["HxOverrides"];
 HxOverrides.dateStr = function(date) {
 	var m = date.getMonth() + 1;
 	var d = date.getDate();
@@ -63,11 +169,11 @@ HxOverrides.iter = function(a) {
 		return this.arr[this.cur++];
 	}};
 }
-var IntIter = function(min,max) {
+var IntIter = $hxClasses["IntIter"] = function(min,max) {
 	this.min = min;
 	this.max = max;
 };
-IntIter.__name__ = true;
+IntIter.__name__ = ["IntIter"];
 IntIter.prototype = {
 	next: function() {
 		return this.min++;
@@ -75,10 +181,12 @@ IntIter.prototype = {
 	,hasNext: function() {
 		return this.min < this.max;
 	}
+	,max: null
+	,min: null
 	,__class__: IntIter
 }
-var Lambda = function() { }
-Lambda.__name__ = true;
+var Lambda = $hxClasses["Lambda"] = function() { }
+Lambda.__name__ = ["Lambda"];
 Lambda.array = function(it) {
 	var a = new Array();
 	var $it0 = $iterator(it)();
@@ -216,10 +324,10 @@ Lambda.concat = function(a,b) {
 	}
 	return l;
 }
-var List = function() {
+var List = $hxClasses["List"] = function() {
 	this.length = 0;
 };
-List.__name__ = true;
+List.__name__ = ["List"];
 List.prototype = {
 	map: function(f) {
 		var b = new List();
@@ -324,10 +432,87 @@ List.prototype = {
 		this.q = x;
 		this.length++;
 	}
+	,length: null
+	,q: null
+	,h: null
 	,__class__: List
 }
-var Std = function() { }
-Std.__name__ = true;
+var Reflect = $hxClasses["Reflect"] = function() { }
+Reflect.__name__ = ["Reflect"];
+Reflect.hasField = function(o,field) {
+	return Object.prototype.hasOwnProperty.call(o,field);
+}
+Reflect.field = function(o,field) {
+	var v = null;
+	try {
+		v = o[field];
+	} catch( e ) {
+	}
+	return v;
+}
+Reflect.setField = function(o,field,value) {
+	o[field] = value;
+}
+Reflect.getProperty = function(o,field) {
+	var tmp;
+	return o == null?null:o.__properties__ && (tmp = o.__properties__["get_" + field])?o[tmp]():o[field];
+}
+Reflect.setProperty = function(o,field,value) {
+	var tmp;
+	if(o.__properties__ && (tmp = o.__properties__["set_" + field])) o[tmp](value); else o[field] = value;
+}
+Reflect.callMethod = function(o,func,args) {
+	return func.apply(o,args);
+}
+Reflect.fields = function(o) {
+	var a = [];
+	if(o != null) {
+		var hasOwnProperty = Object.prototype.hasOwnProperty;
+		for( var f in o ) {
+		if(hasOwnProperty.call(o,f)) a.push(f);
+		}
+	}
+	return a;
+}
+Reflect.isFunction = function(f) {
+	return typeof(f) == "function" && !(f.__name__ || f.__ename__);
+}
+Reflect.compare = function(a,b) {
+	return a == b?0:a > b?1:-1;
+}
+Reflect.compareMethods = function(f1,f2) {
+	if(f1 == f2) return true;
+	if(!Reflect.isFunction(f1) || !Reflect.isFunction(f2)) return false;
+	return f1.scope == f2.scope && f1.method == f2.method && f1.method != null;
+}
+Reflect.isObject = function(v) {
+	if(v == null) return false;
+	var t = typeof(v);
+	return t == "string" || t == "object" && !v.__enum__ || t == "function" && (v.__name__ || v.__ename__);
+}
+Reflect.deleteField = function(o,f) {
+	if(!Reflect.hasField(o,f)) return false;
+	delete(o[f]);
+	return true;
+}
+Reflect.copy = function(o) {
+	var o2 = { };
+	var _g = 0, _g1 = Reflect.fields(o);
+	while(_g < _g1.length) {
+		var f = _g1[_g];
+		++_g;
+		o2[f] = Reflect.field(o,f);
+	}
+	return o2;
+}
+Reflect.makeVarArgs = function(f) {
+	return function() {
+		var a = Array.prototype.slice.call(arguments);
+		return f(a);
+	};
+}
+var Std = $hxClasses["Std"] = function() { }
+Std.__name__ = ["Std"];
 Std["is"] = function(v,t) {
 	return js.Boot.__instanceof(v,t);
 }
@@ -349,10 +534,10 @@ Std.parseFloat = function(x) {
 Std.random = function(x) {
 	return Math.floor(Math.random() * x);
 }
-var StringBuf = function() {
+var StringBuf = $hxClasses["StringBuf"] = function() {
 	this.b = "";
 };
-StringBuf.__name__ = true;
+StringBuf.__name__ = ["StringBuf"];
 StringBuf.prototype = {
 	toString: function() {
 		return this.b;
@@ -366,24 +551,566 @@ StringBuf.prototype = {
 	,add: function(x) {
 		this.b += Std.string(x);
 	}
+	,b: null
 	,__class__: StringBuf
 }
+var StringTools = $hxClasses["StringTools"] = function() { }
+StringTools.__name__ = ["StringTools"];
+StringTools.urlEncode = function(s) {
+	return encodeURIComponent(s);
+}
+StringTools.urlDecode = function(s) {
+	return decodeURIComponent(s.split("+").join(" "));
+}
+StringTools.htmlEscape = function(s) {
+	return s.split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;");
+}
+StringTools.htmlUnescape = function(s) {
+	return s.split("&gt;").join(">").split("&lt;").join("<").split("&amp;").join("&");
+}
+StringTools.startsWith = function(s,start) {
+	return s.length >= start.length && HxOverrides.substr(s,0,start.length) == start;
+}
+StringTools.endsWith = function(s,end) {
+	var elen = end.length;
+	var slen = s.length;
+	return slen >= elen && HxOverrides.substr(s,slen - elen,elen) == end;
+}
+StringTools.isSpace = function(s,pos) {
+	var c = HxOverrides.cca(s,pos);
+	return c >= 9 && c <= 13 || c == 32;
+}
+StringTools.ltrim = function(s) {
+	var l = s.length;
+	var r = 0;
+	while(r < l && StringTools.isSpace(s,r)) r++;
+	if(r > 0) return HxOverrides.substr(s,r,l - r); else return s;
+}
+StringTools.rtrim = function(s) {
+	var l = s.length;
+	var r = 0;
+	while(r < l && StringTools.isSpace(s,l - r - 1)) r++;
+	if(r > 0) return HxOverrides.substr(s,0,l - r); else return s;
+}
+StringTools.trim = function(s) {
+	return StringTools.ltrim(StringTools.rtrim(s));
+}
+StringTools.rpad = function(s,c,l) {
+	var sl = s.length;
+	var cl = c.length;
+	while(sl < l) if(l - sl < cl) {
+		s += HxOverrides.substr(c,0,l - sl);
+		sl = l;
+	} else {
+		s += c;
+		sl += cl;
+	}
+	return s;
+}
+StringTools.lpad = function(s,c,l) {
+	var ns = "";
+	var sl = s.length;
+	if(sl >= l) return s;
+	var cl = c.length;
+	while(sl < l) if(l - sl < cl) {
+		ns += HxOverrides.substr(c,0,l - sl);
+		sl = l;
+	} else {
+		ns += c;
+		sl += cl;
+	}
+	return ns + s;
+}
+StringTools.replace = function(s,sub,by) {
+	return s.split(sub).join(by);
+}
+StringTools.hex = function(n,digits) {
+	var s = "";
+	var hexChars = "0123456789ABCDEF";
+	do {
+		s = hexChars.charAt(n & 15) + s;
+		n >>>= 4;
+	} while(n > 0);
+	if(digits != null) while(s.length < digits) s = "0" + s;
+	return s;
+}
+StringTools.fastCodeAt = function(s,index) {
+	return s.charCodeAt(index);
+}
+StringTools.isEOF = function(c) {
+	return c != c;
+}
+var ValueType = $hxClasses["ValueType"] = { __ename__ : ["ValueType"], __constructs__ : ["TNull","TInt","TFloat","TBool","TObject","TFunction","TClass","TEnum","TUnknown"] }
+ValueType.TNull = ["TNull",0];
+ValueType.TNull.toString = $estr;
+ValueType.TNull.__enum__ = ValueType;
+ValueType.TInt = ["TInt",1];
+ValueType.TInt.toString = $estr;
+ValueType.TInt.__enum__ = ValueType;
+ValueType.TFloat = ["TFloat",2];
+ValueType.TFloat.toString = $estr;
+ValueType.TFloat.__enum__ = ValueType;
+ValueType.TBool = ["TBool",3];
+ValueType.TBool.toString = $estr;
+ValueType.TBool.__enum__ = ValueType;
+ValueType.TObject = ["TObject",4];
+ValueType.TObject.toString = $estr;
+ValueType.TObject.__enum__ = ValueType;
+ValueType.TFunction = ["TFunction",5];
+ValueType.TFunction.toString = $estr;
+ValueType.TFunction.__enum__ = ValueType;
+ValueType.TClass = function(c) { var $x = ["TClass",6,c]; $x.__enum__ = ValueType; $x.toString = $estr; return $x; }
+ValueType.TEnum = function(e) { var $x = ["TEnum",7,e]; $x.__enum__ = ValueType; $x.toString = $estr; return $x; }
+ValueType.TUnknown = ["TUnknown",8];
+ValueType.TUnknown.toString = $estr;
+ValueType.TUnknown.__enum__ = ValueType;
+var Type = $hxClasses["Type"] = function() { }
+Type.__name__ = ["Type"];
+Type.getClass = function(o) {
+	if(o == null) return null;
+	return o.__class__;
+}
+Type.getEnum = function(o) {
+	if(o == null) return null;
+	return o.__enum__;
+}
+Type.getSuperClass = function(c) {
+	return c.__super__;
+}
+Type.getClassName = function(c) {
+	var a = c.__name__;
+	return a.join(".");
+}
+Type.getEnumName = function(e) {
+	var a = e.__ename__;
+	return a.join(".");
+}
+Type.resolveClass = function(name) {
+	var cl = $hxClasses[name];
+	if(cl == null || !cl.__name__) return null;
+	return cl;
+}
+Type.resolveEnum = function(name) {
+	var e = $hxClasses[name];
+	if(e == null || !e.__ename__) return null;
+	return e;
+}
+Type.createInstance = function(cl,args) {
+	switch(args.length) {
+	case 0:
+		return new cl();
+	case 1:
+		return new cl(args[0]);
+	case 2:
+		return new cl(args[0],args[1]);
+	case 3:
+		return new cl(args[0],args[1],args[2]);
+	case 4:
+		return new cl(args[0],args[1],args[2],args[3]);
+	case 5:
+		return new cl(args[0],args[1],args[2],args[3],args[4]);
+	case 6:
+		return new cl(args[0],args[1],args[2],args[3],args[4],args[5]);
+	case 7:
+		return new cl(args[0],args[1],args[2],args[3],args[4],args[5],args[6]);
+	case 8:
+		return new cl(args[0],args[1],args[2],args[3],args[4],args[5],args[6],args[7]);
+	default:
+		throw "Too many arguments";
+	}
+	return null;
+}
+Type.createEmptyInstance = function(cl) {
+	function empty() {}; empty.prototype = cl.prototype;
+	return new empty();
+}
+Type.createEnum = function(e,constr,params) {
+	var f = Reflect.field(e,constr);
+	if(f == null) throw "No such constructor " + constr;
+	if(Reflect.isFunction(f)) {
+		if(params == null) throw "Constructor " + constr + " need parameters";
+		return f.apply(e,params);
+	}
+	if(params != null && params.length != 0) throw "Constructor " + constr + " does not need parameters";
+	return f;
+}
+Type.createEnumIndex = function(e,index,params) {
+	var c = e.__constructs__[index];
+	if(c == null) throw index + " is not a valid enum constructor index";
+	return Type.createEnum(e,c,params);
+}
+Type.getInstanceFields = function(c) {
+	var a = [];
+	for(var i in c.prototype) a.push(i);
+	HxOverrides.remove(a,"__class__");
+	HxOverrides.remove(a,"__properties__");
+	return a;
+}
+Type.getClassFields = function(c) {
+	var a = Reflect.fields(c);
+	HxOverrides.remove(a,"__name__");
+	HxOverrides.remove(a,"__interfaces__");
+	HxOverrides.remove(a,"__properties__");
+	HxOverrides.remove(a,"__super__");
+	HxOverrides.remove(a,"prototype");
+	return a;
+}
+Type.getEnumConstructs = function(e) {
+	var a = e.__constructs__;
+	return a.slice();
+}
+Type["typeof"] = function(v) {
+	switch(typeof(v)) {
+	case "boolean":
+		return ValueType.TBool;
+	case "string":
+		return ValueType.TClass(String);
+	case "number":
+		if(Math.ceil(v) == v % 2147483648.0) return ValueType.TInt;
+		return ValueType.TFloat;
+	case "object":
+		if(v == null) return ValueType.TNull;
+		var e = v.__enum__;
+		if(e != null) return ValueType.TEnum(e);
+		var c = v.__class__;
+		if(c != null) return ValueType.TClass(c);
+		return ValueType.TObject;
+	case "function":
+		if(v.__name__ || v.__ename__) return ValueType.TObject;
+		return ValueType.TFunction;
+	case "undefined":
+		return ValueType.TNull;
+	default:
+		return ValueType.TUnknown;
+	}
+}
+Type.enumEq = function(a,b) {
+	if(a == b) return true;
+	try {
+		if(a[0] != b[0]) return false;
+		var _g1 = 2, _g = a.length;
+		while(_g1 < _g) {
+			var i = _g1++;
+			if(!Type.enumEq(a[i],b[i])) return false;
+		}
+		var e = a.__enum__;
+		if(e != b.__enum__ || e == null) return false;
+	} catch( e ) {
+		return false;
+	}
+	return true;
+}
+Type.enumConstructor = function(e) {
+	return e[0];
+}
+Type.enumParameters = function(e) {
+	return e.slice(2);
+}
+Type.enumIndex = function(e) {
+	return e[1];
+}
+Type.allEnums = function(e) {
+	var all = [];
+	var cst = e.__constructs__;
+	var _g = 0;
+	while(_g < cst.length) {
+		var c = cst[_g];
+		++_g;
+		var v = Reflect.field(e,c);
+		if(!Reflect.isFunction(v)) all.push(v);
+	}
+	return all;
+}
 var haxe = haxe || {}
-haxe.Log = function() { }
-haxe.Log.__name__ = true;
+haxe.Json = $hxClasses["haxe.Json"] = function() {
+};
+haxe.Json.__name__ = ["haxe","Json"];
+haxe.Json.parse = function(text) {
+	return new haxe.Json().doParse(text);
+}
+haxe.Json.stringify = function(value) {
+	return new haxe.Json().toString(value);
+}
+haxe.Json.prototype = {
+	parseString: function() {
+		var start = this.pos;
+		var buf = new StringBuf();
+		while(true) {
+			var c = this.str.charCodeAt(this.pos++);
+			if(c == 34) break;
+			if(c == 92) {
+				buf.b += HxOverrides.substr(this.str,start,this.pos - start - 1);
+				c = this.str.charCodeAt(this.pos++);
+				switch(c) {
+				case 114:
+					buf.b += String.fromCharCode(13);
+					break;
+				case 110:
+					buf.b += String.fromCharCode(10);
+					break;
+				case 116:
+					buf.b += String.fromCharCode(9);
+					break;
+				case 98:
+					buf.b += String.fromCharCode(8);
+					break;
+				case 102:
+					buf.b += String.fromCharCode(12);
+					break;
+				case 47:case 92:case 34:
+					buf.b += String.fromCharCode(c);
+					break;
+				case 117:
+					var uc = Std.parseInt("0x" + HxOverrides.substr(this.str,this.pos,4));
+					this.pos += 4;
+					buf.b += String.fromCharCode(uc);
+					break;
+				default:
+					throw "Invalid escape sequence \\" + String.fromCharCode(c) + " at position " + (this.pos - 1);
+				}
+				start = this.pos;
+			} else if(c != c) throw "Unclosed string";
+		}
+		buf.b += HxOverrides.substr(this.str,start,this.pos - start - 1);
+		return buf.b;
+	}
+	,parseRec: function() {
+		while(true) {
+			var c = this.str.charCodeAt(this.pos++);
+			switch(c) {
+			case 32:case 13:case 10:case 9:
+				break;
+			case 123:
+				var obj = { }, field = null, comma = null;
+				while(true) {
+					var c1 = this.str.charCodeAt(this.pos++);
+					switch(c1) {
+					case 32:case 13:case 10:case 9:
+						break;
+					case 125:
+						if(field != null || comma == false) this.invalidChar();
+						return obj;
+					case 58:
+						if(field == null) this.invalidChar();
+						obj[field] = this.parseRec();
+						field = null;
+						comma = true;
+						break;
+					case 44:
+						if(comma) comma = false; else this.invalidChar();
+						break;
+					case 34:
+						if(comma) this.invalidChar();
+						field = this.parseString();
+						break;
+					default:
+						this.invalidChar();
+					}
+				}
+				break;
+			case 91:
+				var arr = [], comma = null;
+				while(true) {
+					var c1 = this.str.charCodeAt(this.pos++);
+					switch(c1) {
+					case 32:case 13:case 10:case 9:
+						break;
+					case 93:
+						if(comma == false) this.invalidChar();
+						return arr;
+					case 44:
+						if(comma) comma = false; else this.invalidChar();
+						break;
+					default:
+						if(comma) this.invalidChar();
+						this.pos--;
+						arr.push(this.parseRec());
+						comma = true;
+					}
+				}
+				break;
+			case 116:
+				var save = this.pos;
+				if(this.str.charCodeAt(this.pos++) != 114 || this.str.charCodeAt(this.pos++) != 117 || this.str.charCodeAt(this.pos++) != 101) {
+					this.pos = save;
+					this.invalidChar();
+				}
+				return true;
+			case 102:
+				var save = this.pos;
+				if(this.str.charCodeAt(this.pos++) != 97 || this.str.charCodeAt(this.pos++) != 108 || this.str.charCodeAt(this.pos++) != 115 || this.str.charCodeAt(this.pos++) != 101) {
+					this.pos = save;
+					this.invalidChar();
+				}
+				return false;
+			case 110:
+				var save = this.pos;
+				if(this.str.charCodeAt(this.pos++) != 117 || this.str.charCodeAt(this.pos++) != 108 || this.str.charCodeAt(this.pos++) != 108) {
+					this.pos = save;
+					this.invalidChar();
+				}
+				return null;
+			case 34:
+				return this.parseString();
+			case 48:case 49:case 50:case 51:case 52:case 53:case 54:case 55:case 56:case 57:case 45:
+				this.pos--;
+				if(!this.reg_float.match(HxOverrides.substr(this.str,this.pos,null))) throw "Invalid float at position " + this.pos;
+				var v = this.reg_float.matched(0);
+				this.pos += v.length;
+				var f = Std.parseFloat(v);
+				var i = f | 0;
+				return i == f?i:f;
+			default:
+				this.invalidChar();
+			}
+		}
+	}
+	,nextChar: function() {
+		return this.str.charCodeAt(this.pos++);
+	}
+	,invalidChar: function() {
+		this.pos--;
+		throw "Invalid char " + this.str.charCodeAt(this.pos) + " at position " + this.pos;
+	}
+	,doParse: function(str) {
+		this.reg_float = new EReg("^-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?","");
+		this.str = str;
+		this.pos = 0;
+		return this.parseRec();
+	}
+	,quote: function(s) {
+		this.buf.b += Std.string("\"");
+		var i = 0;
+		while(true) {
+			var c = s.charCodeAt(i++);
+			if(c != c) break;
+			switch(c) {
+			case 34:
+				this.buf.b += Std.string("\\\"");
+				break;
+			case 92:
+				this.buf.b += Std.string("\\\\");
+				break;
+			case 10:
+				this.buf.b += Std.string("\\n");
+				break;
+			case 13:
+				this.buf.b += Std.string("\\r");
+				break;
+			case 9:
+				this.buf.b += Std.string("\\t");
+				break;
+			case 8:
+				this.buf.b += Std.string("\\b");
+				break;
+			case 12:
+				this.buf.b += Std.string("\\f");
+				break;
+			default:
+				this.buf.b += String.fromCharCode(c);
+			}
+		}
+		this.buf.b += Std.string("\"");
+	}
+	,toStringRec: function(v) {
+		var $e = (Type["typeof"](v));
+		switch( $e[1] ) {
+		case 8:
+			this.buf.b += Std.string("\"???\"");
+			break;
+		case 4:
+			this.objString(v);
+			break;
+		case 1:
+		case 2:
+			this.buf.b += Std.string(v);
+			break;
+		case 5:
+			this.buf.b += Std.string("\"<fun>\"");
+			break;
+		case 6:
+			var c = $e[2];
+			if(c == String) this.quote(v); else if(c == Array) {
+				var v1 = v;
+				this.buf.b += Std.string("[");
+				var len = v1.length;
+				if(len > 0) {
+					this.toStringRec(v1[0]);
+					var i = 1;
+					while(i < len) {
+						this.buf.b += Std.string(",");
+						this.toStringRec(v1[i++]);
+					}
+				}
+				this.buf.b += Std.string("]");
+			} else if(c == Hash) {
+				var v1 = v;
+				var o = { };
+				var $it0 = v1.keys();
+				while( $it0.hasNext() ) {
+					var k = $it0.next();
+					o[k] = v1.get(k);
+				}
+				this.objString(o);
+			} else this.objString(v);
+			break;
+		case 7:
+			var e = $e[2];
+			this.buf.b += Std.string(v[1]);
+			break;
+		case 3:
+			this.buf.b += Std.string(v?"true":"false");
+			break;
+		case 0:
+			this.buf.b += Std.string("null");
+			break;
+		}
+	}
+	,objString: function(v) {
+		this.fieldsString(v,Reflect.fields(v));
+	}
+	,fieldsString: function(v,fields) {
+		var first = true;
+		this.buf.b += Std.string("{");
+		var _g = 0;
+		while(_g < fields.length) {
+			var f = fields[_g];
+			++_g;
+			var value = Reflect.field(v,f);
+			if(Reflect.isFunction(value)) continue;
+			if(first) first = false; else this.buf.b += Std.string(",");
+			this.quote(f);
+			this.buf.b += Std.string(":");
+			this.toStringRec(value);
+		}
+		this.buf.b += Std.string("}");
+	}
+	,toString: function(v) {
+		this.buf = new StringBuf();
+		this.toStringRec(v);
+		return this.buf.b;
+	}
+	,reg_float: null
+	,pos: null
+	,str: null
+	,buf: null
+	,__class__: haxe.Json
+}
+haxe.Log = $hxClasses["haxe.Log"] = function() { }
+haxe.Log.__name__ = ["haxe","Log"];
 haxe.Log.trace = function(v,infos) {
 	js.Boot.__trace(v,infos);
 }
 haxe.Log.clear = function() {
 	js.Boot.__clear_trace();
 }
-haxe.Timer = function(time_ms) {
+haxe.Timer = $hxClasses["haxe.Timer"] = function(time_ms) {
 	var me = this;
 	this.id = window.setInterval(function() {
 		me.run();
 	},time_ms);
 };
-haxe.Timer.__name__ = true;
+haxe.Timer.__name__ = ["haxe","Timer"];
 haxe.Timer.delay = function(f,time_ms) {
 	var t = new haxe.Timer(time_ms);
 	t.run = function() {
@@ -409,11 +1136,12 @@ haxe.Timer.prototype = {
 		window.clearInterval(this.id);
 		this.id = null;
 	}
+	,id: null
 	,__class__: haxe.Timer
 }
 var js = js || {}
-js.Boot = function() { }
-js.Boot.__name__ = true;
+js.Boot = $hxClasses["js.Boot"] = function() { }
+js.Boot.__name__ = ["js","Boot"];
 js.Boot.__unhtml = function(s) {
 	return s.split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;");
 }
@@ -547,8 +1275,10 @@ js.Boot.__instanceof = function(o,cl) {
 js.Boot.__cast = function(o,t) {
 	if(js.Boot.__instanceof(o,t)) return o; else throw "Cannot cast " + Std.string(o) + " to " + Std.string(t);
 }
-js.Lib = function() { }
-js.Lib.__name__ = true;
+js.Lib = $hxClasses["js.Lib"] = function() { }
+js.Lib.__name__ = ["js","Lib"];
+js.Lib.document = null;
+js.Lib.window = null;
 js.Lib.debug = function() {
 	debugger;
 }
@@ -564,7 +1294,7 @@ js.Lib.setErrorHandler = function(f) {
 var org = org || {}
 if(!org.jinjor) org.jinjor = {}
 if(!org.jinjor.smf) org.jinjor.smf = {}
-org.jinjor.smf.SmfData = function(data) {
+org.jinjor.smf.SmfData = $hxClasses["org.jinjor.smf.SmfData"] = function(data) {
 	var buf = eval("new Uint8Array(data)");
 	var p = 0;
 	if(!(buf[p++] == 77 && buf[p++] == 84 && buf[p++] == 104 && buf[p++] == 100)) throw "MIDIファイルではありません";
@@ -633,7 +1363,7 @@ org.jinjor.smf.SmfData = function(data) {
 	this.tracks = tracks;
 	haxe.Log.trace(tracks,{ fileName : "Smf.hx", lineNumber : 113, className : "org.jinjor.smf.SmfData", methodName : "new"});
 };
-org.jinjor.smf.SmfData.__name__ = true;
+org.jinjor.smf.SmfData.__name__ = ["org","jinjor","smf","SmfData"];
 org.jinjor.smf.SmfData.getVariableLength = function(buf,p) {
 	var length = 0;
 	var k = 1;
@@ -646,9 +1376,13 @@ org.jinjor.smf.SmfData.getVariableLength = function(buf,p) {
 	return [length,k];
 }
 org.jinjor.smf.SmfData.prototype = {
-	__class__: org.jinjor.smf.SmfData
+	tracks: null
+	,timeMode: null
+	,trackCount: null
+	,format: null
+	,__class__: org.jinjor.smf.SmfData
 }
-org.jinjor.smf.SmfFile = function(file,reader,onReady) {
+org.jinjor.smf.SmfFile = $hxClasses["org.jinjor.smf.SmfFile"] = function(file,reader,onReady) {
 	this.name = file.name;
 	this.type = file.type;
 	this.size = file.size;
@@ -660,48 +1394,58 @@ org.jinjor.smf.SmfFile = function(file,reader,onReady) {
 	};
 	reader.readAsArrayBuffer(file);
 };
-org.jinjor.smf.SmfFile.__name__ = true;
+org.jinjor.smf.SmfFile.__name__ = ["org","jinjor","smf","SmfFile"];
 org.jinjor.smf.SmfFile.prototype = {
-	__class__: org.jinjor.smf.SmfFile
+	smfData: null
+	,size: null
+	,type: null
+	,name: null
+	,__class__: org.jinjor.smf.SmfFile
 }
 if(!org.jinjor.synth) org.jinjor.synth = {}
-org.jinjor.synth.ProgramDef = function(number,description) {
+org.jinjor.synth.ProgramDef = $hxClasses["org.jinjor.synth.ProgramDef"] = function(number,description) {
 	this.number = number;
 	this.description = description;
 };
-org.jinjor.synth.ProgramDef.__name__ = true;
+org.jinjor.synth.ProgramDef.__name__ = ["org","jinjor","synth","ProgramDef"];
 org.jinjor.synth.ProgramDef.prototype = {
-	__class__: org.jinjor.synth.ProgramDef
+	description: null
+	,number: null
+	,__class__: org.jinjor.synth.ProgramDef
 }
-org.jinjor.synth.SynthDef = function(name,url,author,programs) {
+org.jinjor.synth.SynthDef = $hxClasses["org.jinjor.synth.SynthDef"] = function(name,url,author,programs) {
 	this.name = name;
 	this.url = url;
 	this.author = author;
 	this.programs = programs;
 };
-org.jinjor.synth.SynthDef.__name__ = true;
+org.jinjor.synth.SynthDef.__name__ = ["org","jinjor","synth","SynthDef"];
 org.jinjor.synth.SynthDef.prototype = {
-	__class__: org.jinjor.synth.SynthDef
+	programs: null
+	,author: null
+	,url: null
+	,name: null
+	,__class__: org.jinjor.synth.SynthDef
 }
 if(!org.jinjor.util) org.jinjor.util = {}
-org.jinjor.util.Util = function() { }
-org.jinjor.util.Util.__name__ = true;
+org.jinjor.util.Util = $hxClasses["org.jinjor.util.Util"] = function() { }
+org.jinjor.util.Util.__name__ = ["org","jinjor","util","Util"];
 org.jinjor.util.Util.or = function(a,b) {
 	return a != null?a:b;
 }
 if(!org.jinjor.webmidi) org.jinjor.webmidi = {}
-org.jinjor.webmidi.All = function() { }
-org.jinjor.webmidi.All.__name__ = true;
+org.jinjor.webmidi.All = $hxClasses["org.jinjor.webmidi.All"] = function() { }
+org.jinjor.webmidi.All.__name__ = ["org","jinjor","webmidi","All"];
 org.jinjor.webmidi.All.main = function() {
 }
-org.jinjor.webmidi.Sequencer = function(tune,getSynth) {
+org.jinjor.webmidi.Sequencer = $hxClasses["org.jinjor.webmidi.Sequencer"] = function(tune,getSynth) {
 	this.location = 0;
 	this.tune = tune;
 	this.playing = null;
 	this.recState = null;
 	this.getSynth = getSynth;
 };
-org.jinjor.webmidi.Sequencer.__name__ = true;
+org.jinjor.webmidi.Sequencer.__name__ = ["org","jinjor","webmidi","Sequencer"];
 org.jinjor.webmidi.Sequencer.prototype = {
 	stop: function() {
 		haxe.Log.trace("stop",{ fileName : "Sequencer.hx", lineNumber : 118, className : "org.jinjor.webmidi.Sequencer", methodName : "stop"});
@@ -796,15 +1540,20 @@ org.jinjor.webmidi.Sequencer.prototype = {
 			return true;
 		});
 	}
+	,getSynth: null
+	,recState: null
+	,playing: null
+	,tune: null
+	,location: null
 	,__class__: org.jinjor.webmidi.Sequencer
 }
-org.jinjor.webmidi.RecState = function() {
+org.jinjor.webmidi.RecState = $hxClasses["org.jinjor.webmidi.RecState"] = function() {
 	this.keyCount = 0;
 	this.noteOns = [];
 	this.running = false;
 	this.startTime = Math.floor(new Date().getTime());
 };
-org.jinjor.webmidi.RecState.__name__ = true;
+org.jinjor.webmidi.RecState.__name__ = ["org","jinjor","webmidi","RecState"];
 org.jinjor.webmidi.RecState.prototype = {
 	getLocation: function() {
 		return Math.floor(new Date().getTime()) - this.startTime;
@@ -832,9 +1581,13 @@ org.jinjor.webmidi.RecState.prototype = {
 	}
 	,onNoteFinished: function(startTime,endTime,velocity,time) {
 	}
+	,startTime: null
+	,running: null
+	,noteOns: null
+	,keyCount: null
 	,__class__: org.jinjor.webmidi.RecState
 }
-org.jinjor.webmidi.Track = function(name,synthDef,channel,program,messages) {
+org.jinjor.webmidi.Track = $hxClasses["org.jinjor.webmidi.Track"] = function(name,synthDef,channel,program,messages) {
 	this.id = org.jinjor.webmidi.Track.createTrackId();
 	this.name = name;
 	this.synthDef = synthDef;
@@ -843,7 +1596,7 @@ org.jinjor.webmidi.Track = function(name,synthDef,channel,program,messages) {
 	this.selected = true;
 	this.messages = org.jinjor.util.Util.or(messages,[[Math.floor(40.),128,62,0]]);
 };
-org.jinjor.webmidi.Track.__name__ = true;
+org.jinjor.webmidi.Track.__name__ = ["org","jinjor","webmidi","Track"];
 org.jinjor.webmidi.Track.createTrackId = function() {
 	return ++org.jinjor.webmidi.Track.trackId;
 }
@@ -858,16 +1611,23 @@ org.jinjor.webmidi.Track.prototype = {
 		this.messages.push([startTime,144,note,velocity]);
 		this.messages.push([endTime,128,note,0]);
 	}
+	,messages: null
+	,selected: null
+	,program: null
+	,channel: null
+	,synthDef: null
+	,name: null
+	,id: null
 	,__class__: org.jinjor.webmidi.Track
 }
-org.jinjor.webmidi.Tune = function() {
+org.jinjor.webmidi.Tune = $hxClasses["org.jinjor.webmidi.Tune"] = function() {
 	this.format = 1;
 	this.timeMode = 480;
 	this.tracks = [];
 	this.selectedTrackId = -1;
 	this.pxPerMsMode = 0;
 };
-org.jinjor.webmidi.Tune.__name__ = true;
+org.jinjor.webmidi.Tune.__name__ = ["org","jinjor","webmidi","Tune"];
 org.jinjor.webmidi.Tune.prototype = {
 	getTimePerTick: function() {
 		var tempo = 120;
@@ -929,26 +1689,84 @@ org.jinjor.webmidi.Tune.prototype = {
 			return new org.jinjor.webmidi.Track("_",synth,1,null,messages);
 		});
 	}
+	,pxPerMsMode: null
+	,selectedTrackId: null
+	,tracks: null
+	,timeMode: null
+	,format: null
 	,__class__: org.jinjor.webmidi.Tune
 }
 if(!org.jinjor.webmidi.controllers) org.jinjor.webmidi.controllers = {}
-org.jinjor.webmidi.controllers.TuneEditController = function() { }
-org.jinjor.webmidi.controllers.TuneEditController.__name__ = true;
-org.jinjor.webmidi.controllers.AngularTuneEditController = function(scope) {
+org.jinjor.webmidi.controllers.TuneEditController = $hxClasses["org.jinjor.webmidi.controllers.TuneEditController"] = function() { }
+org.jinjor.webmidi.controllers.TuneEditController.__name__ = ["org","jinjor","webmidi","controllers","TuneEditController"];
+org.jinjor.webmidi.controllers.AngularTuneEditController = $hxClasses["org.jinjor.webmidi.controllers.AngularTuneEditController"] = function(scope) {
 	this.scope = scope;
 };
-org.jinjor.webmidi.controllers.AngularTuneEditController.__name__ = true;
+org.jinjor.webmidi.controllers.AngularTuneEditController.__name__ = ["org","jinjor","webmidi","controllers","AngularTuneEditController"];
 org.jinjor.webmidi.controllers.AngularTuneEditController.__interfaces__ = [org.jinjor.webmidi.controllers.TuneEditController];
 org.jinjor.webmidi.controllers.AngularTuneEditController.prototype = {
-	__class__: org.jinjor.webmidi.controllers.AngularTuneEditController
+	scope: null
+	,__class__: org.jinjor.webmidi.controllers.AngularTuneEditController
+}
+if(!org.jinjor.webmidi.daos) org.jinjor.webmidi.daos = {}
+org.jinjor.webmidi.daos.TuneDao = $hxClasses["org.jinjor.webmidi.daos.TuneDao"] = function() { }
+org.jinjor.webmidi.daos.TuneDao.__name__ = ["org","jinjor","webmidi","daos","TuneDao"];
+org.jinjor.webmidi.daos.TuneDao.prototype = {
+	get: null
+	,save: null
+	,__class__: org.jinjor.webmidi.daos.TuneDao
+}
+org.jinjor.webmidi.daos.AngularTuneDao = $hxClasses["org.jinjor.webmidi.daos.AngularTuneDao"] = function(http) {
+	this.http = http;
+};
+org.jinjor.webmidi.daos.AngularTuneDao.__name__ = ["org","jinjor","webmidi","daos","AngularTuneDao"];
+org.jinjor.webmidi.daos.AngularTuneDao.__interfaces__ = [org.jinjor.webmidi.daos.TuneDao];
+org.jinjor.webmidi.daos.AngularTuneDao.prototype = {
+	get: function(address,_callback) {
+		this.http({ method : "GET", url : "/contents/" + address}).success(function(tracks) {
+			_callback(null,tracks);
+		}).error(function(e) {
+			_callback(e,null);
+		});
+	}
+	,save: function(tune,address,_callback) {
+		this.http({ method : "POST", url : "/saveContents", data : { address : address, contents : haxe.Json.stringify(tune.tracks)}}).success(function() {
+			_callback(null);
+		}).error(function(e) {
+			_callback(e);
+		});
+	}
+	,http: null
+	,__class__: org.jinjor.webmidi.daos.AngularTuneDao
+}
+org.jinjor.webmidi.daos.UserDao = $hxClasses["org.jinjor.webmidi.daos.UserDao"] = function() { }
+org.jinjor.webmidi.daos.UserDao.__name__ = ["org","jinjor","webmidi","daos","UserDao"];
+org.jinjor.webmidi.daos.UserDao.prototype = {
+	get: null
+	,__class__: org.jinjor.webmidi.daos.UserDao
+}
+org.jinjor.webmidi.daos.AngularUserDao = $hxClasses["org.jinjor.webmidi.daos.AngularUserDao"] = function(http) {
+	this.http = http;
+};
+org.jinjor.webmidi.daos.AngularUserDao.__name__ = ["org","jinjor","webmidi","daos","AngularUserDao"];
+org.jinjor.webmidi.daos.AngularUserDao.__interfaces__ = [org.jinjor.webmidi.daos.UserDao];
+org.jinjor.webmidi.daos.AngularUserDao.prototype = {
+	get: function(_callback) {
+		this.http({ method : "GET", url : "/session"}).success(function(user) {
+			_callback(null,user);
+		});
+	}
+	,http: null
+	,__class__: org.jinjor.webmidi.daos.AngularUserDao
 }
 if(!org.jinjor.webmidi.views) org.jinjor.webmidi.views = {}
-org.jinjor.webmidi.views.TuneEditView = function() { }
-org.jinjor.webmidi.views.TuneEditView.__name__ = true;
+org.jinjor.webmidi.views.TuneEditView = $hxClasses["org.jinjor.webmidi.views.TuneEditView"] = function() { }
+org.jinjor.webmidi.views.TuneEditView.__name__ = ["org","jinjor","webmidi","views","TuneEditView"];
 org.jinjor.webmidi.views.TuneEditView.prototype = {
-	__class__: org.jinjor.webmidi.views.TuneEditView
+	rerenderTracks: null
+	,__class__: org.jinjor.webmidi.views.TuneEditView
 }
-org.jinjor.webmidi.views.HtmlTuneEditView = function(document,tune) {
+org.jinjor.webmidi.views.HtmlTuneEditView = $hxClasses["org.jinjor.webmidi.views.HtmlTuneEditView"] = function(document,tune) {
 	this.rerenders = tune.tracks.map(function(track) {
 		var frame = document.getElementById("pianoroll_summary." + track.id);
 		var canvas1 = document.getElementById("" + track.id + ".1");
@@ -976,7 +1794,7 @@ org.jinjor.webmidi.views.HtmlTuneEditView = function(document,tune) {
 		};
 	});
 };
-org.jinjor.webmidi.views.HtmlTuneEditView.__name__ = true;
+org.jinjor.webmidi.views.HtmlTuneEditView.__name__ = ["org","jinjor","webmidi","views","HtmlTuneEditView"];
 org.jinjor.webmidi.views.HtmlTuneEditView.__interfaces__ = [org.jinjor.webmidi.views.TuneEditView];
 org.jinjor.webmidi.views.HtmlTuneEditView.prototype = {
 	rerenderTracks: function(sequencer) {
@@ -986,6 +1804,7 @@ org.jinjor.webmidi.views.HtmlTuneEditView.prototype = {
 			return true;
 		});
 	}
+	,rerenders: null
 	,__class__: org.jinjor.webmidi.views.HtmlTuneEditView
 }
 function $iterator(o) { if( o instanceof Array ) return function() { return HxOverrides.iter(o); }; return typeof(o.iterator) == 'function' ? $bind(o,o.iterator) : o.iterator; };
@@ -1001,27 +1820,29 @@ Math.__name__ = ["Math"];
 Math.NaN = Number.NaN;
 Math.NEGATIVE_INFINITY = Number.NEGATIVE_INFINITY;
 Math.POSITIVE_INFINITY = Number.POSITIVE_INFINITY;
+$hxClasses.Math = Math;
 Math.isFinite = function(i) {
 	return isFinite(i);
 };
 Math.isNaN = function(i) {
 	return isNaN(i);
 };
-String.prototype.__class__ = String;
-String.__name__ = true;
-Array.prototype.__class__ = Array;
-Array.__name__ = true;
-Date.prototype.__class__ = Date;
+String.prototype.__class__ = $hxClasses.String = String;
+String.__name__ = ["String"];
+Array.prototype.__class__ = $hxClasses.Array = Array;
+Array.__name__ = ["Array"];
+Date.prototype.__class__ = $hxClasses.Date = Date;
 Date.__name__ = ["Date"];
-var Int = { __name__ : ["Int"]};
-var Dynamic = { __name__ : ["Dynamic"]};
-var Float = Number;
+var Int = $hxClasses.Int = { __name__ : ["Int"]};
+var Dynamic = $hxClasses.Dynamic = { __name__ : ["Dynamic"]};
+var Float = $hxClasses.Float = Number;
 Float.__name__ = ["Float"];
-var Bool = Boolean;
+var Bool = $hxClasses.Bool = Boolean;
 Bool.__ename__ = ["Bool"];
-var Class = { __name__ : ["Class"]};
+var Class = $hxClasses.Class = { __name__ : ["Class"]};
 var Enum = { };
-var Void = { __ename__ : ["Void"]};
+var Void = $hxClasses.Void = { __ename__ : ["Void"]};
+if(typeof(JSON) != "undefined") haxe.Json = JSON;
 if(typeof document != "undefined") js.Lib.document = document;
 if(typeof window != "undefined") {
 	js.Lib.window = window;
@@ -1031,6 +1852,7 @@ if(typeof window != "undefined") {
 		return f(msg,[url + ":" + line]);
 	};
 }
+js.Lib.onerror = null;
 org.jinjor.synth.SynthDef.GMPlayer = new org.jinjor.synth.SynthDef("GMPlayer","http://www.g200kg.com/en/docs/gmplayer/","g200kg",[new org.jinjor.synth.ProgramDef(1,""),new org.jinjor.synth.ProgramDef(2,""),new org.jinjor.synth.ProgramDef(3,""),new org.jinjor.synth.ProgramDef(4,""),new org.jinjor.synth.ProgramDef(5,""),new org.jinjor.synth.ProgramDef(6,""),new org.jinjor.synth.ProgramDef(7,""),new org.jinjor.synth.ProgramDef(8,""),new org.jinjor.synth.ProgramDef(9,""),new org.jinjor.synth.ProgramDef(10,"")]);
 org.jinjor.synth.SynthDef.WebBeeper = new org.jinjor.synth.SynthDef("WebBeeper","http://www.g200kg.com/en/docs/webbeeper/","g200kg",[new org.jinjor.synth.ProgramDef(1,""),new org.jinjor.synth.ProgramDef(2,""),new org.jinjor.synth.ProgramDef(3,""),new org.jinjor.synth.ProgramDef(4,""),new org.jinjor.synth.ProgramDef(5,""),new org.jinjor.synth.ProgramDef(6,""),new org.jinjor.synth.ProgramDef(7,""),new org.jinjor.synth.ProgramDef(8,""),new org.jinjor.synth.ProgramDef(9,""),new org.jinjor.synth.ProgramDef(10,"")]);
 org.jinjor.synth.SynthDef.synthDefs = [org.jinjor.synth.SynthDef.GMPlayer,org.jinjor.synth.SynthDef.WebBeeper];

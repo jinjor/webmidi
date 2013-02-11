@@ -12,11 +12,16 @@
   
   <link rel="stylesheet" type="text/css" href="/css/base.css"/>
   <script type="text/javascript">
+    
+  var SmfFile = org.jinjor.smf.SmfFile;
+  var SynthDef = org.jinjor.synth.SynthDef;
   var RecState = org.jinjor.webmidi.RecState;
   var Track = org.jinjor.webmidi.Track;
   var Tune = org.jinjor.webmidi.Tune;
   var Sequencer = org.jinjor.webmidi.Sequencer;
   var TuneEditView = org.jinjor.webmidi.views.HtmlTuneEditView;
+  var AngularTuneDao = org.jinjor.webmidi.daos.AngularTuneDao;
+  var AngularUserDao = org.jinjor.webmidi.daos.AngularUserDao;
 
   var module = angular.module('brouserSynth', []);
   JazzPlugin.attachTo(module);
@@ -59,6 +64,9 @@
   });
 
   function KeyboardCtrl($scope, $http, Synth, jazz) {
+  
+    var tuneDao = new AngularTuneDao($http);
+    var userDao = new AngularUserDao($http);
 
     $scope.address = location.href.split('/tunes/', 2)[1];
     document.title = $scope.address + " - WebMidiLink Sample";
@@ -66,13 +74,17 @@
     $scope.connection = 'disconnected';
     $scope.echoms = '';
     $scope.user = null;
-    $http({method: 'GET', url: '/session'}).success(function(user) {
-      $scope.user = user;
+    
+    userDao.get(function(e, user){
+      if(e){
+        alert(e);
+      }else{
+        $scope.user = user;
+      } 
     });
     
-    
     $scope.synths = {};
-    _(org.jinjor.synth.SynthDef.synthDefs).each(function(synthDef){
+    _(SynthDef.synthDefs).each(function(synthDef){
       $scope.synths[synthDef.name] = new Synth(synthDef.name, synthDef.url, synthDef.author, synthDef.programs);
     });
     $scope.synthsAsArray = function(){
@@ -92,20 +104,14 @@
     }
     
     $scope.saveContents = function(){
-      _($scope.tune.tracks).each(function(track){
-        track.synth.sy = null;
-      });
-      
-      $http({method: 'POST', url: '/saveContents', data: {
-        address: $scope.address,
-        contents: JSON.stringify($scope.tune.tracks)
-      }}).success(function() {
-        alert('saveしました')
-      }).error(function(e) {
-        alert(e);
+      tuneDao.save($scope.tune, function(e){
+        if(e){
+          alert(e)
+        }else{
+          alert('saveしました');
+        }
       });
     };
-    
     
     $scope.selectTrack = function(track){
       $scope.tune.selectedTrackId = track.id;
@@ -146,30 +152,30 @@
     });
     
     $(document).ready(function(){
-      $http({method: 'GET', url: '/contents/' + $scope.address}).success(function(tracks) {
-        console.log(tracks);
-        $scope.tune.replaceTracksByLoadedTracks(tracks, $scope.synths);
-        var synthMap = {};
-        $scope.sequencer = new Sequencer($scope.tune, function(synthDef){
-          return synthMap[synthDef.name]
-        });
-        _($scope.synths).each(function(synth){
-          synth.load(document[synth.id]);
-          synthMap[synth.id] = synth;
-        });
-        setTimeout(function(){
-          createView().rerenderTracks($scope.sequencer);
-        },0);
-      }).error(function(e) {
-        alert(e);
+      tuneDao.get($scope.address, function(e, tracks) {
+        if(e){
+          alert(e);
+        }else{
+          console.log(tracks);
+          $scope.tune.replaceTracksByLoadedTracks(tracks, $scope.synths);
+          var synthMap = {};
+          $scope.sequencer = new Sequencer($scope.tune, function(synthDef){
+            return synthMap[synthDef.name]
+          });
+          _($scope.synths).each(function(synth){
+            synth.load(document[synth.id]);
+            synthMap[synth.id] = synth;
+          });
+          setTimeout(function(){
+            createView().rerenderTracks($scope.sequencer);
+          },0);
+        }
       });
     
     
       _($scope.synths).each(function(synth){
         synth.load(document[synth.id]);
       });
-      
-      var SmfFile = org.jinjor.smf.SmfFile;
 
       $.event.props.push('dataTransfer');//おまじない
       if (window.File) {
