@@ -110,9 +110,8 @@ class Sequencer{
     r.tick();
     r.render();
   }
-  public function gainPxPerMs(tune, amount, rerender : Void -> Void){
-    tune.gainPxPerMs(amount);
-    rerender();
+  public function gainPxPerMs(amount){
+    this.tune.gainPxPerMs(amount);
   }
 
   public function stop(){

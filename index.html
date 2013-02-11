@@ -125,12 +125,15 @@
       $scope.sequencer.play(function(){
         view.rerenderTracks($scope.sequencer);
       });
-    }
+    };
     $scope.rec = function(){
       $scope.sequencer.rec(function(){
         view.rerenderTracks($scope.sequencer);
       });
-    }
+    };
+    $scope.gainPxPerMs = function(amount){
+      $scope.sequencer.gainPxPerMs(amount);
+    };
     
     jazz.onMessage(function(t, m0, m1, m2){
       if(m0 == 248){
@@ -229,8 +232,8 @@
     <button ng-click="sequencer.stop()" ng-disabled="!sequencer.playing">Stop</button>
   </div>
   <div>
-    <button ng-click="sequencer.gainPxPerMs(tune, -1, rerenderTracks)" ng-disabled="tune.hasMinPxPerMs()">-</button>
-    <button ng-click="sequencer.gainPxPerMs(tune, 1, rerenderTracks)" ng-disabled="tune.hasMaxPxPerMs()">+</button>
+    <button ng-click="gainPxPerMs(-1)" ng-disabled="tune.hasMinPxPerMs()">-</button>
+    <button ng-click="gainPxPerMs(1)" ng-disabled="tune.hasMaxPxPerMs()">+</button>
   </div>
   <div class="tracks">
     <ul>

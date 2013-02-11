@@ -704,14 +704,13 @@ org.jinjor.webmidi.Sequencer = function(tune,getSynth) {
 org.jinjor.webmidi.Sequencer.__name__ = true;
 org.jinjor.webmidi.Sequencer.prototype = {
 	stop: function() {
-		haxe.Log.trace("stop",{ fileName : "Sequencer.hx", lineNumber : 119, className : "org.jinjor.webmidi.Sequencer", methodName : "stop"});
+		haxe.Log.trace("stop",{ fileName : "Sequencer.hx", lineNumber : 118, className : "org.jinjor.webmidi.Sequencer", methodName : "stop"});
 		this.location = 0;
 		this.playing = null;
 		this.stopPlaying();
 	}
-	,gainPxPerMs: function(tune,amount,rerender) {
-		tune.gainPxPerMs(amount);
-		rerender();
+	,gainPxPerMs: function(amount) {
+		this.tune.gainPxPerMs(amount);
 	}
 	,play: function(rerender,optMode) {
 		var _g = this;
