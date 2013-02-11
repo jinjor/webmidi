@@ -1,6 +1,7 @@
 package org.jinjor.webmidi;
 
 import org.jinjor.webmidi.Tune;
+import org.jinjor.synth.SynthDef;
 import haxe.Timer;
 import js.Lib;
 using Lambda;
@@ -11,31 +12,38 @@ class Sequencer{
   public var tune : Tune;
   public var playing : String;
   public var recState : RecState;
+  private var getSynth : SynthDef -> Dynamic;
   
-  public function new(tune){
+  public function new(tune : Tune, getSynth : SynthDef -> Dynamic){
     this.location = 0;
     this.tune = tune;
     this.playing = null;
     this.recState = null;
+    this.getSynth = getSynth;
   }
-  
   public function send(t, m0, m1, m2){
     this.recState.send(m0, m1, m2);
     this.tune.getSelectedTracks().foreach(function(track){
-      track.putMidi(m0, m1, m2);
+      sendMidiMessage(track, m0, m1, m2);//キーボードからはchannel1で来る前提
       return true;
     });
   }
-  public function rec(rerender){
+  public function rec(rerender : Sequencer -> Void){
     this.play(rerender, 'recoding');
   }
   public function stopPlaying(){
     this.tune.tracks.foreach(function(track){
-      track.allSoundOff();
+      this.getSynth(track.synthDef).allSoundOff();
       return true;
     });
   }
-  public function play(rerender, optMode : String){
+  private function sendMidiMessage(track, m0, m1, m2){
+    this.getSynth(track.synthDef).sendMidiMessage(m0 + track.channel - 1, m1, m2);
+  }
+  public function programChange(track : Track){
+    this.sendMidiMessage(track, 0xc0, track.program.number, 0);
+  }
+  public function play(rerender : Sequencer -> Void, optMode : String){
     if(this.tune.tracks.length <= 0){
       return;
     }
@@ -66,7 +74,7 @@ class Sequencer{
     });
     //trace(messageTrackPairs);
     that.tune.tracks.foreach(function(track){
-      track.programChange(null);//synthロード後にダメ押し
+      programChange(track);//synthロード後にダメ押し
       return true;
     });
     var index = 0;
@@ -85,7 +93,7 @@ class Sequencer{
       }else if(current == null){
         that.stop();
       }else if(that.tune.tickToMs(currentMessage[0]) < location){
-        currentTrack.putMidi(currentMessage[1], currentMessage[2], currentMessage[3]);
+        sendMidiMessage(currentTrack, currentMessage[1], currentMessage[2], currentMessage[3]);
         index++;
         r.tick();
       }else{
@@ -95,12 +103,16 @@ class Sequencer{
     r.render = function(){
       if(that.playing != null){
         var s = Date.now().getTime();
-        rerender();
+        rerender(that);
         Timer.delay(r.render, 30);
       }
     };
     r.tick();
     r.render();
+  }
+  public function gainPxPerMs(tune, amount, rerender : Void -> Void){
+    tune.gainPxPerMs(amount);
+    rerender();
   }
 
   public function stop(){

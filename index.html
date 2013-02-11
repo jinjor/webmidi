@@ -16,6 +16,7 @@
   var Track = org.jinjor.webmidi.Track;
   var Tune = org.jinjor.webmidi.Tune;
   var Sequencer = org.jinjor.webmidi.Sequencer;
+  var TuneEditView = org.jinjor.webmidi.views.HtmlTuneEditView;
 
   var module = angular.module('brouserSynth', []);
   JazzPlugin.attachTo(module);
@@ -84,41 +85,11 @@
     
     $scope.rerenderTracks;
     
-    var readyToRender = function(){
-      var rerenders = _($scope.tune.tracks).map(function(track){
-        var frame = document.getElementById('pianoroll_summary.' + track.id);
-        var canvas1 = document.getElementById('' + track.id + ".1");
-        var canvas2 = document.getElementById('' + track.id + ".2");
-        var ctx1 = canvas1.getContext('2d');
-        var ctx2 = canvas2.getContext('2d');
-        
-        ctx1.fillStyle = "#4444ff";
-        ctx1.beginPath();
-        ctx2.fillStyle = "#7777ff";
-        ctx2.beginPath();
-        
-        return function(recState, pxPerMs){
-          if(recState){
-            ctx2.clearRect(0,0, canvas2.width, canvas2.height);
-            ctx2.fillRect(recState.getLocation() * pxPerMs, 0, 1, 127);
-          }else{
-            ctx2.clearRect(0,0, canvas2.width, canvas2.height);
-            ctx1.clearRect(0,0, canvas1.width, canvas1.height);
-            _(track.messages).each(function(message){
-              var x1 = $scope.tune.tickToMs(message[0]) * pxPerMs;
-              var y1 = (127 - message[2]);
-              ctx1.fillRect(x1, y1, 2, 2);
-            });
-          }
-        };
-      });
-      $scope.rerenderTracks = function(){
-        var pxPerMs = $scope.tune.getPxPerMs();
-        _(rerenders).each(function(rerender){
-          rerender($scope.sequencer.recState, pxPerMs);
-        });
-      };
-    };
+    var view;
+    var createView = function(){
+      view = new TuneEditView(document, $scope.tune);
+      return view;
+    }
     
     $scope.saveContents = function(){
       _($scope.tune.tracks).each(function(track){
@@ -150,6 +121,16 @@
               $scope.sequencer.recState.keyIsPressed()) ? 'pressed' : '';
     };
     $scope.playing = false;
+    $scope.play = function(){
+      $scope.sequencer.play(function(sequencer){
+        view.rerenderTracks(sequencer);
+      });
+    }
+    $scope.rec = function(){
+      $scope.sequencer.rec(function(sequencer){
+        view.rerenderTracks(sequencer);
+      });
+    }
     
     jazz.onMessage(function(t, m0, m1, m2){
       if(m0 == 248){
@@ -165,13 +146,17 @@
       $http({method: 'GET', url: '/contents/' + $scope.address}).success(function(tracks) {
         console.log(tracks);
         $scope.tune.replaceTracksByLoadedTracks(tracks, $scope.synths);
-        $scope.sequencer = new Sequencer($scope.tune);
+        var synthMap = {};
+        $scope.sequencer = new Sequencer($scope.tune, function(synthDef){
+          return synthMap[synthDef.name]
+        });
         _($scope.synths).each(function(synth){
           synth.load(document[synth.id]);
+          synthMap[synth.id] = synth;
         });
         setTimeout(function(){
-          readyToRender();
-          $scope.rerenderTracks();
+          console.log(view);
+          createView().rerenderTracks($scope.sequencer);
         },0);
       }).error(function(e) {
         alert(e);
@@ -195,8 +180,7 @@
               $scope.tune.refresh(smfFile.smfData, $scope.synths.GMPlayer);
               $scope.$apply();
               setTimeout(function(){
-                readyToRender();
-                $scope.rerenderTracks();
+                createView().rerenderTracks($scope.sequencer);
               },0);
             });
             event.preventDefault();
@@ -241,13 +225,13 @@
   <button ng-repeat="synth in synths" ng-click="tune.addTrack(synth, 1)">{{synth.name}}</button>
   
   <div>
-    <button ng-click="sequencer.rec(rerenderTracks)" ng-disabled="sequencer.playing">●Rec</button>
-    <button ng-click="sequencer.play(rerenderTracks)" ng-disabled="sequencer.playing">Play</button>
+    <button ng-click="rec()" ng-disabled="sequencer.playing">●Rec</button>
+    <button ng-click="play()" ng-disabled="sequencer.playing">Play</button>
     <button ng-click="sequencer.stop()" ng-disabled="!sequencer.playing">Stop</button>
   </div>
   <div>
-    <button ng-click="tune.gainPxPerMs(-1)" ng-disabled="tune.hasMinPxPerMs()">-</button>
-    <button ng-click="tune.gainPxPerMs(1)" ng-disabled="tune.hasMaxPxPerMs()">+</button>
+    <button ng-click="sequencer.gainPxPerMs(tune, -1, rerenderTracks)" ng-disabled="tune.hasMinPxPerMs()">-</button>
+    <button ng-click="sequencer.gainPxPerMs(tune, 1, rerenderTracks)" ng-disabled="tune.hasMaxPxPerMs()">+</button>
   </div>
   <div class="tracks">
     <ul>
@@ -256,9 +240,9 @@
           <!--<label>{{$index + 1}}</label>-->
           <span class="keyboard {{keyIsPressed(track)}}">■</span> <!--{{track.name}} : {{track.synth.name}}-->
                                                                     
-          <select ng-model="track.synth" ng-change="track.onChangeSynth()" ng-options="synth.name for synth in synthsAsArray()"></select>
+          <select ng-model="track.synthDef" ng-change="track.onChangeSynth()" ng-options="synth.name for synth in synthsAsArray()"></select>
           <label>Ch:</label><select ng-model="track.channel" ng-disabled="false" ng-options="channel for channel in channels"></select>
-          <label>Prg:</label><select ng-model="track.program" ng-change="track.programChange(track.program.number)" ng-options="(program.number + ':' + program.description) for program in track.synth.programsAsArray()"></select>
+          <label>Prg:</label><select ng-model="track.program" ng-change="sequencer.programChange(track)" ng-options="(program.number + ':' + program.description) for program in sequencer.getSynth(track.synthDef).programsAsArray()"></select>
           <!--<input type="checkbox" ng-model="track.rec">-->
           <form ng-submit="track.deleteAll()">
             <input type="submit" value="Delete"></input>

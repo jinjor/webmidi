@@ -665,6 +665,14 @@ org.jinjor.smf.SmfFile.prototype = {
 	__class__: org.jinjor.smf.SmfFile
 }
 if(!org.jinjor.synth) org.jinjor.synth = {}
+org.jinjor.synth.ProgramDef = function(number,description) {
+	this.number = number;
+	this.description = description;
+};
+org.jinjor.synth.ProgramDef.__name__ = true;
+org.jinjor.synth.ProgramDef.prototype = {
+	__class__: org.jinjor.synth.ProgramDef
+}
 org.jinjor.synth.SynthDef = function(name,url,author,programs) {
 	this.name = name;
 	this.url = url;
@@ -686,21 +694,27 @@ org.jinjor.webmidi.All = function() { }
 org.jinjor.webmidi.All.__name__ = true;
 org.jinjor.webmidi.All.main = function() {
 }
-org.jinjor.webmidi.Sequencer = function(tune) {
+org.jinjor.webmidi.Sequencer = function(tune,getSynth) {
 	this.location = 0;
 	this.tune = tune;
 	this.playing = null;
 	this.recState = null;
+	this.getSynth = getSynth;
 };
 org.jinjor.webmidi.Sequencer.__name__ = true;
 org.jinjor.webmidi.Sequencer.prototype = {
 	stop: function() {
-		haxe.Log.trace("stop",{ fileName : "Sequencer.hx", lineNumber : 106, className : "org.jinjor.webmidi.Sequencer", methodName : "stop"});
+		haxe.Log.trace("stop",{ fileName : "Sequencer.hx", lineNumber : 119, className : "org.jinjor.webmidi.Sequencer", methodName : "stop"});
 		this.location = 0;
 		this.playing = null;
 		this.stopPlaying();
 	}
+	,gainPxPerMs: function(tune,amount,rerender) {
+		tune.gainPxPerMs(amount);
+		rerender();
+	}
 	,play: function(rerender,optMode) {
+		var _g = this;
 		if(this.tune.tracks.length <= 0) return;
 		var that = this;
 		this.recState = new org.jinjor.webmidi.RecState();
@@ -724,12 +738,12 @@ org.jinjor.webmidi.Sequencer.prototype = {
 			}));
 			return memo.concat(pairs);
 		},[]);
-		this.playing = optMode != null?optMode:"playing";
+		this.playing = org.jinjor.util.Util.or(optMode,"playing");
 		messageTrackPairs.sort(function(a,b) {
 			return a[0][0] - b[0][0];
 		});
 		Lambda.foreach(that.tune.tracks,function(track) {
-			track.programChange(null);
+			_g.programChange(track);
 			return true;
 		});
 		var index = 0;
@@ -744,7 +758,7 @@ org.jinjor.webmidi.Sequencer.prototype = {
 			currentTrack = current[1];
 			currentMessage = current[0];
 			if(that1.playing == null) that1.stopPlaying(); else if(current == null) that1.stop(); else if(that1.tune.tickToMs(currentMessage[0]) < location) {
-				currentTrack.putMidi(currentMessage[1],currentMessage[2],currentMessage[3]);
+				_g.sendMidiMessage(currentTrack,currentMessage[1],currentMessage[2],currentMessage[3]);
 				index++;
 				r.tick();
 			} else haxe.Timer.delay(r.tick,1);
@@ -752,16 +766,23 @@ org.jinjor.webmidi.Sequencer.prototype = {
 		r.render = function() {
 			if(that1.playing != null) {
 				var s = new Date().getTime();
-				rerender();
+				rerender(that1);
 				haxe.Timer.delay(r.render,30);
 			}
 		};
 		r.tick();
 		r.render();
 	}
+	,programChange: function(track) {
+		this.sendMidiMessage(track,192,track.program.number,0);
+	}
+	,sendMidiMessage: function(track,m0,m1,m2) {
+		this.getSynth(track.synthDef).sendMidiMessage(m0 + track.channel - 1,m1,m2);
+	}
 	,stopPlaying: function() {
+		var _g = this;
 		Lambda.foreach(this.tune.tracks,function(track) {
-			track.allSoundOff();
+			_g.getSynth(track.synthDef).allSoundOff();
 			return true;
 		});
 	}
@@ -769,9 +790,10 @@ org.jinjor.webmidi.Sequencer.prototype = {
 		this.play(rerender,"recoding");
 	}
 	,send: function(t,m0,m1,m2) {
+		var _g = this;
 		this.recState.send(m0,m1,m2);
 		Lambda.foreach(this.tune.getSelectedTracks(),function(track) {
-			track.putMidi(m0,m1,m2);
+			_g.sendMidiMessage(track,m0,m1,m2);
 			return true;
 		});
 	}
@@ -813,42 +835,22 @@ org.jinjor.webmidi.RecState.prototype = {
 	}
 	,__class__: org.jinjor.webmidi.RecState
 }
-org.jinjor.webmidi.Track = function(name,synth,channel,program,messages) {
+org.jinjor.webmidi.Track = function(name,synthDef,channel,program,messages) {
 	this.id = org.jinjor.webmidi.Track.createTrackId();
 	this.name = name;
-	this.synth = synth;
+	this.synthDef = synthDef;
 	this.channel = org.jinjor.util.Util.or(channel,1);
-	this.program = program != null?this.synth.programs[program.number]:this.synth.programs[1];
-	if(this.program == null) this.program = this.synth.programs[1];
+	this.program = org.jinjor.util.Util.or(program,synthDef.programs[0]);
 	this.selected = true;
 	this.messages = org.jinjor.util.Util.or(messages,[[Math.floor(40.),128,62,0]]);
-	this.programChange(this.program.number);
 };
 org.jinjor.webmidi.Track.__name__ = true;
 org.jinjor.webmidi.Track.createTrackId = function() {
 	return ++org.jinjor.webmidi.Track.trackId;
 }
 org.jinjor.webmidi.Track.prototype = {
-	onChangeSynth: function() {
-		this.program = this.synth.programs[1];
-	}
-	,deleteAll: function() {
+	deleteAll: function() {
 		this.messages = [[Math.floor(40.),128,62,0]];
-	}
-	,putMidi: function(m0,m1,m2) {
-		this.synth.sendMidiMessage(m0 + this.channel - 1,m1,m2);
-	}
-	,allSoundOff: function() {
-		this.synth.allSoundOff();
-	}
-	,programChange: function(number) {
-		this.putMidi(192,org.jinjor.util.Util.or(number,this.program.number),0);
-	}
-	,noteOff: function(note) {
-		this.putMidi(128,note,0);
-	}
-	,noteOn: function(note,velo) {
-		this.putMidi(144,note,velo);
 	}
 	,recElse: function(time,m0,m1,m2) {
 		this.messages.push([time,m0,m1,m2]);
@@ -917,7 +919,7 @@ org.jinjor.webmidi.Tune.prototype = {
 		if(smfData.timeMode > 32768) throw "まだMSB=0しか受け付けません";
 		this.format = smfData.format;
 		this.timeMode = smfData.timeMode;
-		haxe.Log.trace("timeMode=" + this.timeMode,{ fileName : "Tune.hx", lineNumber : 137, className : "org.jinjor.webmidi.Tune", methodName : "refresh"});
+		haxe.Log.trace("timeMode=" + this.timeMode,{ fileName : "Tune.hx", lineNumber : 116, className : "org.jinjor.webmidi.Tune", methodName : "refresh"});
 		var that = this;
 		this.tracks = smfData.tracks.map(function(events) {
 			var deltaSum = 0;
@@ -929,6 +931,63 @@ org.jinjor.webmidi.Tune.prototype = {
 		});
 	}
 	,__class__: org.jinjor.webmidi.Tune
+}
+if(!org.jinjor.webmidi.controllers) org.jinjor.webmidi.controllers = {}
+org.jinjor.webmidi.controllers.TuneEditController = function() { }
+org.jinjor.webmidi.controllers.TuneEditController.__name__ = true;
+org.jinjor.webmidi.controllers.AngularTuneEditController = function(scope) {
+	this.scope = scope;
+};
+org.jinjor.webmidi.controllers.AngularTuneEditController.__name__ = true;
+org.jinjor.webmidi.controllers.AngularTuneEditController.__interfaces__ = [org.jinjor.webmidi.controllers.TuneEditController];
+org.jinjor.webmidi.controllers.AngularTuneEditController.prototype = {
+	__class__: org.jinjor.webmidi.controllers.AngularTuneEditController
+}
+if(!org.jinjor.webmidi.views) org.jinjor.webmidi.views = {}
+org.jinjor.webmidi.views.TuneEditView = function() { }
+org.jinjor.webmidi.views.TuneEditView.__name__ = true;
+org.jinjor.webmidi.views.TuneEditView.prototype = {
+	__class__: org.jinjor.webmidi.views.TuneEditView
+}
+org.jinjor.webmidi.views.HtmlTuneEditView = function(document,tune) {
+	this.rerenders = tune.tracks.map(function(track) {
+		var frame = document.getElementById("pianoroll_summary." + track.id);
+		var canvas1 = document.getElementById("" + track.id + ".1");
+		var canvas2 = document.getElementById("" + track.id + ".2");
+		var ctx1 = canvas1.getContext("2d");
+		var ctx2 = canvas2.getContext("2d");
+		ctx1.fillStyle = "#4444ff";
+		ctx1.beginPath();
+		ctx2.fillStyle = "#7777ff";
+		ctx2.beginPath();
+		return function(recState,pxPerMs) {
+			if(recState != null) {
+				ctx2.clearRect(0,0,canvas2.width,canvas2.height);
+				ctx2.fillRect(recState.getLocation() * pxPerMs,0,1,127);
+			} else {
+				ctx2.clearRect(0,0,canvas2.width,canvas2.height);
+				ctx1.clearRect(0,0,canvas1.width,canvas1.height);
+				Lambda.foreach(track.messages,function(message) {
+					var x1 = tune.tickToMs(message[0]) * pxPerMs;
+					var y1 = 127 - message[2];
+					ctx1.fillRect(x1,y1,2,2);
+					return true;
+				});
+			}
+		};
+	});
+};
+org.jinjor.webmidi.views.HtmlTuneEditView.__name__ = true;
+org.jinjor.webmidi.views.HtmlTuneEditView.__interfaces__ = [org.jinjor.webmidi.views.TuneEditView];
+org.jinjor.webmidi.views.HtmlTuneEditView.prototype = {
+	rerenderTracks: function(sequencer) {
+		var pxPerMs = sequencer.tune.getPxPerMs();
+		Lambda.foreach(this.rerenders,function(rerender) {
+			rerender(sequencer.recState,pxPerMs);
+			return true;
+		});
+	}
+	,__class__: org.jinjor.webmidi.views.HtmlTuneEditView
 }
 function $iterator(o) { if( o instanceof Array ) return function() { return HxOverrides.iter(o); }; return typeof(o.iterator) == 'function' ? $bind(o,o.iterator) : o.iterator; };
 var $_;
@@ -973,8 +1032,8 @@ if(typeof window != "undefined") {
 		return f(msg,[url + ":" + line]);
 	};
 }
-org.jinjor.synth.SynthDef.GMPlayer = new org.jinjor.synth.SynthDef("GMPlayer","http://www.g200kg.com/en/docs/gmplayer/","g200kg",{ '1' : { number : 1, description : ""}, '2' : { number : 2, description : ""}, '3' : { number : 3, description : ""}, '4' : { number : 4, description : ""}, '5' : { number : 5, description : ""}, '6' : { number : 6, description : ""}, '7' : { number : 7, description : ""}, '8' : { number : 8, description : ""}, '9' : { number : 9, description : ""}, '10' : { number : 10, description : ""}});
-org.jinjor.synth.SynthDef.WebBeeper = new org.jinjor.synth.SynthDef("WebBeeper","http://www.g200kg.com/en/docs/webbeeper/","g200kg",{ '1' : { number : 1, description : ""}, '2' : { number : 2, description : ""}, '3' : { number : 3, description : ""}, '4' : { number : 4, description : ""}, '5' : { number : 5, description : ""}, '6' : { number : 6, description : ""}, '7' : { number : 7, description : ""}, '8' : { number : 8, description : ""}, '9' : { number : 9, description : ""}, '10' : { number : 10, description : ""}});
+org.jinjor.synth.SynthDef.GMPlayer = new org.jinjor.synth.SynthDef("GMPlayer","http://www.g200kg.com/en/docs/gmplayer/","g200kg",[new org.jinjor.synth.ProgramDef(1,""),new org.jinjor.synth.ProgramDef(2,""),new org.jinjor.synth.ProgramDef(3,""),new org.jinjor.synth.ProgramDef(4,""),new org.jinjor.synth.ProgramDef(5,""),new org.jinjor.synth.ProgramDef(6,""),new org.jinjor.synth.ProgramDef(7,""),new org.jinjor.synth.ProgramDef(8,""),new org.jinjor.synth.ProgramDef(9,""),new org.jinjor.synth.ProgramDef(10,"")]);
+org.jinjor.synth.SynthDef.WebBeeper = new org.jinjor.synth.SynthDef("WebBeeper","http://www.g200kg.com/en/docs/webbeeper/","g200kg",[new org.jinjor.synth.ProgramDef(1,""),new org.jinjor.synth.ProgramDef(2,""),new org.jinjor.synth.ProgramDef(3,""),new org.jinjor.synth.ProgramDef(4,""),new org.jinjor.synth.ProgramDef(5,""),new org.jinjor.synth.ProgramDef(6,""),new org.jinjor.synth.ProgramDef(7,""),new org.jinjor.synth.ProgramDef(8,""),new org.jinjor.synth.ProgramDef(9,""),new org.jinjor.synth.ProgramDef(10,"")]);
 org.jinjor.synth.SynthDef.synthDefs = [org.jinjor.synth.SynthDef.GMPlayer,org.jinjor.synth.SynthDef.WebBeeper];
 org.jinjor.webmidi.Track.trackId = 0;
 org.jinjor.webmidi.Tune.pxPerMsModes = Lambda.array(Lambda.map([1,2,4,8,16,32],function(ratio) {

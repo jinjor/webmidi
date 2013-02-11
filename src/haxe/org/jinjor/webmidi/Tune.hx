@@ -1,5 +1,6 @@
 package org.jinjor.webmidi;
 
+import org.jinjor.synth.SynthDef;
 import js.Lib;
 using Lambda;
 using org.jinjor.util.Util;
@@ -16,9 +17,9 @@ class RecState{
     this.running = false;
     this.startTime = Math.floor(Date.now().getTime());
   }
-  public dynamic function onNoteFinished(startTime, endTime, velocity, time){
+  public dynamic function onNoteFinished(startTime, endTime, velocity, time : Int){
   }
-  public dynamic function onElse(time, m0, m1, m2){
+  public dynamic function onElse(time : Int, m0, m1, m2){
   }
   public function send(m0, m1, m2){
     var time = this.getLocation();
@@ -56,22 +57,20 @@ class Track {
   }
   public var id : Int;
   public var name : String;
-  public var synth : Dynamic;
+  public var synthDef : SynthDef;
   public var channel : Int;
-  public var program : Dynamic;
+  public var program : ProgramDef;
   public var selected : Bool;
   public var messages : Array<Array<Int>>;
 
-  public function new(name, synth, channel : Int, program : Dynamic, messages : Array<Array<Int>>){
+  public function new(name, synthDef, channel : Int, program : ProgramDef, messages : Array<Array<Int>>){
     this.id = createTrackId();
     this.name = name;
-    this.synth = synth;
+    this.synthDef = synthDef;
     this.channel = channel.or(1);
-    this.program = if(program != null) this.synth.programs[program.number].or(this.synth.programs[1])
-                    else this.synth.programs[1];
+    this.program = program.or(synthDef.programs[0]);
     this.selected = true;
     this.messages = messages.or([[Math.floor(1000*60*10/(1000*60/480*120)), 0x80, 62, 0]]);
-    this.programChange(this.program.number);
   }
 
   public function recNote(note : Int, velocity : Int, startTime : Int, endTime : Int){
@@ -81,26 +80,8 @@ class Track {
   public function recElse(time : Int, m0 : Int, m1 : Int, m2 : Int){
     this.messages.push([time, m0, m1, m2]);
   }
-  public function noteOn(note : Int, velo : Int) {
-    this.putMidi(0x90, note, velo);
-  }
-  public function noteOff(note) {
-    this.putMidi(0x80, note, 0);
-  }
-  public function programChange(number : Int) {
-    this.putMidi(0xc0, number.or(this.program.number), 0);
-  }
-  public function allSoundOff() {
-    this.synth.allSoundOff();
-  }
-  public function putMidi(m0 : Int, m1 : Int, m2 : Int){
-    this.synth.sendMidiMessage(m0 + this.channel - 1, m1, m2);//キーボードからはchannel1で来る前提
-  }
   public function deleteAll(){
     this.messages = [[Math.floor(1000*60*10/(1000*60/480*120)), 0x80, 62, 0]];
-  }
-  public function onChangeSynth(){
-    this.program = this.synth.programs[1];
   }
 }
 

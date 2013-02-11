@@ -6,6 +6,9 @@ import org.jinjor.synth.SynthDef;
 import org.jinjor.webmidi.Tune;
 import org.jinjor.webmidi.Sequencer;
 
+import org.jinjor.webmidi.views.TuneEditView;
+import org.jinjor.webmidi.controllers.TuneEditController;
+
 class All{
   public static function main(){
   }
