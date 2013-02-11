@@ -22,7 +22,9 @@ class Sequencer{
     this.getSynth = getSynth;
   }
   public function send(t, m0, m1, m2){
-    this.recState.send(m0, m1, m2);
+    if(this.recState != null){
+      this.recState.send(m0, m1, m2);
+    }
     this.tune.getSelectedTracks().foreach(function(track){
       sendMidiMessage(track, m0, m1, m2);//キーボードからはchannel1で来る前提
       return true;

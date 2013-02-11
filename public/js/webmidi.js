@@ -1448,7 +1448,7 @@ org.jinjor.webmidi.Sequencer = $hxClasses["org.jinjor.webmidi.Sequencer"] = func
 org.jinjor.webmidi.Sequencer.__name__ = ["org","jinjor","webmidi","Sequencer"];
 org.jinjor.webmidi.Sequencer.prototype = {
 	stop: function() {
-		haxe.Log.trace("stop",{ fileName : "Sequencer.hx", lineNumber : 118, className : "org.jinjor.webmidi.Sequencer", methodName : "stop"});
+		haxe.Log.trace("stop",{ fileName : "Sequencer.hx", lineNumber : 120, className : "org.jinjor.webmidi.Sequencer", methodName : "stop"});
 		this.location = 0;
 		this.playing = null;
 		this.stopPlaying();
@@ -1534,7 +1534,7 @@ org.jinjor.webmidi.Sequencer.prototype = {
 	}
 	,send: function(t,m0,m1,m2) {
 		var _g = this;
-		this.recState.send(m0,m1,m2);
+		if(this.recState != null) this.recState.send(m0,m1,m2);
 		Lambda.foreach(this.tune.getSelectedTracks(),function(track) {
 			_g.sendMidiMessage(track,m0,m1,m2);
 			return true;
