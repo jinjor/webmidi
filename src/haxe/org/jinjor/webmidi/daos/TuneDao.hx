@@ -13,7 +13,7 @@ interface TuneDao{
 
 class AngularTuneDao implements TuneDao {
   
-  private var http : Dynamic;
+  private var http : Dynamic;//TODO これはControllerの役割を含んでいるので微妙
   public function new(http){
     this.http = http;
   }
