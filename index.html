@@ -22,6 +22,7 @@
   var TuneEditView = org.jinjor.webmidi.views.HtmlTuneEditView;
   var AngularTuneDao = org.jinjor.webmidi.daos.AngularTuneDao;
   var AngularUserDao = org.jinjor.webmidi.daos.AngularUserDao;
+  var AngularTuneEditController = org.jinjor.webmidi.controllers.AngularTuneEditController;
 
   var module = angular.module('brouserSynth', []);
   JazzPlugin.attachTo(module);
@@ -65,6 +66,8 @@
 
   function KeyboardCtrl($scope, $http, Synth, jazz) {
   
+    var view = new TuneEditView(document, $scope);
+    var controller = new AngularTuneEditController($scope);
     var tuneDao = new AngularTuneDao($http);
     var userDao = new AngularUserDao($http);
 
@@ -93,13 +96,7 @@
     };
     
     $scope.channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
-    
-    var view;
-    var createView = function(){
-      view = new TuneEditView(document, $scope.sequencer);
-      return view;
-    }
-    
+
     $scope.saveContents = function(){
       tuneDao.save($scope.sequencer.tune, $scope.address, function(e){
         if(e){
@@ -124,26 +121,27 @@
               $scope.sequencer.recState.keyIsPressed()) ? 'pressed' : '';
     };
     $scope.play = function(){
-      $scope.sequencer.play(function(){
-        view.renderLocation();
-      }),function(){
-        $scope.$apply();
-      };
+      controller.play(view);
     };
     $scope.rec = function(){
-      $scope.sequencer.rec(function(){
-        view.renderLocation();
-      },function(){
-        $scope.$apply();
-      });
+      controller.rec(view);
     };
     $scope.stop = function(){
-      $scope.sequencer.stopPlaying();
+      $scope.sequencer.stopPlaying(function(){
+        view.renderAll();
+      });
       view.renderAll();
     };
     $scope.gainPxPerMs = function(amount){
       $scope.sequencer.gainPxPerMs(amount);
       view.renderAll();
+    };
+    $scope.addTrack = function(synthDef){
+      $scope.sequencer.tune.addTrack(synthDef, 1);
+      setTimeout(function(){
+        view.refresh();
+        view.renderAll();
+      },0);
     };
     
     jazz.onMessage(function(t, m0, m1, m2){
@@ -173,7 +171,8 @@
             synthMap[synth.id] = synth;
           });
           setTimeout(function(){
-            createView().renderAll();
+            view.refresh();
+            view.renderAll();
           },0);
         }
       });
@@ -236,7 +235,9 @@
       </select>
     </p>
   </div>
-  <button ng-repeat="synthDef in synthDefs" ng-click="sequencer.tune.addTrack(synthDef, 1)">{{synthDef.name}}</button>
+  <button ng-repeat="synthDef in synthDefs" ng-click="addTrack(synthDef)">
+    {{synthDef.name}}
+  </button>
   
   <div>
     <button ng-click="rec()" ng-disabled="sequencer.isPlaying()">●Rec</button>

@@ -20,7 +20,7 @@ class Sequencer{
     this.playStatus = PlayStatus.Stop(0);
     this.getSynth = getSynth;
   }
-  private function getLocation(){
+  public function getLocation(){
     return switch(this.playStatus){
       case Stop(location) : location;
       case Playing(playState) : playState.getLocation();
@@ -31,6 +31,13 @@ class Sequencer{
     return switch(this.playStatus){
       case Stop(location) : false;
       case Playing(playState) : true;
+      case Recording(recState) : true;
+    };
+  }
+  private function isRecording(){
+    return switch(this.playStatus){
+      case Stop(location) : false;
+      case Playing(playState) : false;
       case Recording(recState) : true;
     };
   }
@@ -46,8 +53,8 @@ class Sequencer{
       return true;
     });
   }
-  public function rec(rerender : Void -> Void, onStop : Void -> Void){
-    this.play(rerender, onStop, true);
+  public function rec(){
+    this.play(true);
   }
   public function stopPlaying(){
     this.playStatus = PlayStatus.Stop(getLocation());
@@ -62,7 +69,7 @@ class Sequencer{
   public function programChange(track : Track){
     this.sendMidiMessage(track, 0xc0, track.program.number, 0);
   }
-  public function play(rerender : Void -> Void, onStop : Void -> Void, record : Bool){
+  public function play(record : Bool){
     if(this.tune.tracks.length <= 0){
       return;
     }
@@ -107,7 +114,9 @@ class Sequencer{
       current = if(index < messageTrackPairs.length) messageTrackPairs[index] else null;
       
       if(current == null){
-        that.stopPlaying();
+        if(!that.isRecording()){
+          that.stopPlaying();
+        }
         return;
       }
       currentTrack = current[1];
@@ -118,10 +127,9 @@ class Sequencer{
         case Recording(recState) : false;
       }){
         that.stopPlaying();
-      }else if(current == null){
+      }else if(current == null && !that.isRecording()){
         that.stopPlaying();
       }else if(that.tune.tickToMs(currentMessage[0]) < location){
-        
         sendMidiMessage(currentTrack, currentMessage[1], currentMessage[2], currentMessage[3]);
         index++;
         r.tick();
@@ -129,18 +137,7 @@ class Sequencer{
         Timer.delay(r.tick, 1);
       }
     };
-    r.render = function(){
-      rerender();
-      if(switch(that.playStatus){
-        case Stop(location) : false;
-        case Playing(playState) : true;
-        case Recording(recState) : true;
-      }){
-        Timer.delay(r.render, 50);
-      }
-    };
     r.tick();
-    r.render();
   }
   public function gainPxPerMs(amount){
     this.tune.gainPxPerMs(amount);

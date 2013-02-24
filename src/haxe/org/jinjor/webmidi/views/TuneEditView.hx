@@ -9,13 +9,24 @@ using org.jinjor.util.Util;
 interface TuneEditView{
   var renderAll : Void -> Void;
   var renderLocation : Void -> Void;
+  public function refresh() : Void;
 }
 class HtmlTuneEditView implements TuneEditView {
   
   public var renderAll : Void -> Void;
   public var renderLocation : Void -> Void;
+  private var document : Dynamic;
+  private var scope : Dynamic;
   
-  public function new(document, sequencer){
+  public function new(document, scope){
+    this.document = document;
+    this.scope = scope;
+  }
+  public function refresh(){
+    var document = this.document;
+    var scope = this.scope;
+    var sequencer : Sequencer = scope.sequencer;
+    
     var tune = sequencer.tune;
     var rerenders : Array<Array<Void -> Void>> = tune.tracks.map(function(track : Track){
       var frame = document.getElementById('pianoroll_summary.' + track.id);
@@ -46,7 +57,7 @@ class HtmlTuneEditView implements TuneEditView {
         ctx2.fillRect(sequencer.getLocation() * pxPerMs, 0, 1, 127);
       };
       return [renderAll, renderLocation];
-    });
+    }).array();
     this.renderAll = function(){
       rerenders.foreach(function(rerender){
         rerender[0]();
